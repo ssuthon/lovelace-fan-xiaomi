@@ -103,6 +103,9 @@ class FanXiaomi extends HTMLElement {
             this.supportedAttributes.natural_speed_reporting = false;
             this.supportedAttributes.sleep_mode = true;
         }
+        if (['zhimi.fan.za5'].includes(attrs['model'])){
+            this.supportedAttributes.speedLevels = 3;
+        }
 
         //trick to support of 'any' fan
         if (use_standard_speeds) {
