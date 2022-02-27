@@ -676,7 +676,7 @@ LED
             activeElement.classList.remove('active')
         }
         activeElement = fanboxa.querySelector('.var-led')
-        if (this.supportedAttributes.led) {
+        if (this.supportedAttributes.led && !this.config.hide_led_button) {
             if (led) {
                 if (activeElement.classList.contains('active') === false) {
                     activeElement.classList.add('active')
@@ -836,6 +836,9 @@ class ContentCardEditor extends LitElement {
   }
   render() {
     return html`
+    <style>
+        .row{padding-bottom:5px;}
+    </style>
     <div class="card-config">
     <div class="row">
     <paper-input
@@ -844,33 +847,6 @@ class ContentCardEditor extends LitElement {
           .configValue="${"name"}"
           @value-changed="${this._valueChanged}"
       ></paper-input>
-      </div>
-      <div class="row">
-      <ha-formfield label="Disable animation">
-        <ha-switch
-          .checked=${this.config.disable_animation}
-          .configValue="${'disable_animation'}"
-          @change=${this._valueChanged}
-        ></ha-switch>
-      </ha-formfield>
-      </div>
-      <div class="row">
-      <ha-formfield label="Use HA standard speeds (low/medium/high)">
-        <ha-switch
-          .checked=${this.config.use_standard_speeds}
-          .configValue="${'use_standard_speeds'}"
-          @change=${this._valueChanged}
-        ></ha-switch>
-      </ha-formfield>
-      </div>
-      <div class="row">
-      <ha-formfield label="Show sleep mode button">
-        <ha-switch
-          .checked=${this.config.force_sleep_mode_support}
-          .configValue="${'force_sleep_mode_support'}"
-          @change=${this._valueChanged}
-        ></ha-switch>
-      </ha-formfield>
       </div>
       <div class="row">
       <paper-dropdown-menu
@@ -901,6 +877,42 @@ class ContentCardEditor extends LitElement {
         @change=${this._valueChanged}
         allow-custom-entity
       ></ha-entity-picker>
+      </div>
+      <div class="row">
+      <ha-formfield label="Disable animation">
+        <ha-switch
+          .checked=${this.config.disable_animation}
+          .configValue="${'disable_animation'}"
+          @change=${this._valueChanged}
+        ></ha-switch>
+      </ha-formfield>
+      </div>
+      <div class="row">
+      <ha-formfield label="Use HA standard speeds (low/medium/high)">
+        <ha-switch
+          .checked=${this.config.use_standard_speeds}
+          .configValue="${'use_standard_speeds'}"
+          @change=${this._valueChanged}
+        ></ha-switch>
+      </ha-formfield>
+      </div>
+      <div class="row">
+      <ha-formfield label="Show sleep mode button">
+        <ha-switch
+          .checked=${this.config.force_sleep_mode_support}
+          .configValue="${'force_sleep_mode_support'}"
+          @change=${this._valueChanged}
+        ></ha-switch>
+      </ha-formfield>
+      </div>
+      <div class="row">
+      <ha-formfield label="Hide LED button (for supported devices)">
+        <ha-switch
+          .checked=${this.config.hide_led_button}
+          .configValue="${'hide_led_button'}"
+        @change=${this._valueChanged}
+        ></ha-switch>
+      </ha-formfield>
       </div>
     </div>
     `
