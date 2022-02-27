@@ -46,6 +46,10 @@ class FanXiaomi extends HTMLElement {
     }
 
     set hass(hass) {
+        // Store most recent `hass` instance so we can update in the editor preview.
+        // This should only be used in setConfig()
+        this.mostRecentHass = hass;
+
         const entityId = this.config.entity;
         //const style = this.config.style || '';
         const myname = this.config.name;
@@ -426,6 +430,7 @@ class FanXiaomi extends HTMLElement {
                 card.querySelector('.dialog').style.display = 'block'
             }*/
             this.card = card;
+            this.innerHTML = '';
             this.appendChild(card);
         }
 
@@ -453,6 +458,12 @@ class FanXiaomi extends HTMLElement {
             throw new Error('You must specify an entity');
         }
         this.config = config;
+
+        // Force re-layout to update the preview
+        if (this.mostRecentHass) {
+            this.card = null;
+            this.hass = this.mostRecentHass;
+        }
     }
 
     // The height of your card. Home Assistant uses this to automatically
