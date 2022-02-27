@@ -485,7 +485,7 @@ p{margin:0;padding:0}
 .c1{top:20%;left:20%;width:60%;height:60%;border:2px solid #fff;border-radius:50%;cursor:pointer;baskground:#ffffff00}
 .c1,.c2{position:absolute;box-sizing:border-box}
 .c2{top:0;left:0;width:100%;height:100%;border:10px solid #f7f7f7;border-radius:50%}
-.c3{position:absolute;top:40%;left:40%;box-sizing:border-box;width:20%;height:20%;border-radius:50%;background:#fff;color:#ddd}
+.c3{position:absolute;top:40%;left:40%;box-sizing:border-box;width:20%;height:20%;border-radius:50%;background:#fff;color:#ddd;border:2px solid white;line-height:24px}
 .c3.active{border:2px solid #8dd5c3}
 .c3 span ha-icon{width:100%;height:100%}
 .chevron{position:absolute;top:0;height:100%;opacity:0}
