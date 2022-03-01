@@ -30,6 +30,21 @@ function moreInfo(entity, large = false) {
     return el;
 }
 
+const OptionsPlatform = [
+    'xiaomi_miio_fan',
+    'xiaomi_miio_airpurifier',
+];
+
+const defaultConfig = { 
+    name: "",
+    platform: OptionsPlatform[0],
+    entity: "fan.fan",
+    disable_animation: false,
+    use_standard_speeds: false,
+    force_sleep_mode_support: false,
+    hide_led_button: false
+}
+
 class FanXiaomi extends HTMLElement {
     
     static getConfigElement() {
@@ -37,7 +52,10 @@ class FanXiaomi extends HTMLElement {
     }
     
     static getStubConfig() {
-        return { entity: "fan.fan", name: "Xiaomi Fan", platform: "xiaomi_miio_airpurifier", disable_animation: false }
+        return {
+            ...defaultConfig,
+            name: "Xiaomi Fan",
+        };
     }
     
     supportedAttributes = {
@@ -50,36 +68,17 @@ class FanXiaomi extends HTMLElement {
         // This should only be used in setConfig()
         this.mostRecentHass = hass;
 
-        const entityId = this.config.entity;
-        //const style = this.config.style || '';
-        const myname = this.config.name;
-        const state = hass.states[entityId];
-        const ui = this.getUI();
-        const platform = this.config.platform || 'xiaomi_miio_fan';
-        const use_standard_speeds = this.config.use_standard_speeds || false;
-        const force_sleep_mode_support = this.config.force_sleep_mode_support || false;
-        
-
-        if (!this.card){
-            const card = document.createElement('ha-card');
-            card.className = 'fan-xiaomi'
-            card.appendChild(ui)
-
-            // Check if fan is disconnected
-            if(state === undefined || state.state === 'unavailable'){
-                card.classList.add('offline');
-                this.card = card;
-                this.appendChild(card);
-                ui.querySelector('.var-title').textContent = (this.config.name || '') + ' (Disconnected)';
-                return;
-            }
+        if (!this.card) {
+            this.configure(hass)
+            this.createCard(hass);
+            this.updateUI(hass);
+        } else {
+            this.updateUI(hass);
         }
+    }
         
-        if (state.state === 'unavailable'){
-            ui.querySelector('.var-title').textContent = (this.config.name || '') + ' (Disconnected)';
-            return;
-        }
-        
+    configure(hass) {
+        const state = hass.states[this.config.entity];
         const attrs = state.attributes;
 
         if (['dmaker.fan.1c'].includes(attrs['model'])){
@@ -124,321 +123,339 @@ class FanXiaomi extends HTMLElement {
         }
 
         //trick to support of 'any' fan
-        if (use_standard_speeds) {
+        if (this.config.use_standard_speeds) {
             this.supportedAttributes.speedList = ['low', 'medium', 'high']
         }
-        if (force_sleep_mode_support) {
+        if (this.config.force_sleep_mode_support) {
             this.supportedAttributes.sleep_mode = true;
         }
 
-        if (!this.card) {
-            const card = document.createElement('ha-card');
-            card.className = 'fan-xiaomi'
+    }
 
-            // Create UI
-            card.appendChild(ui)
+    createCard(hass) {
+        const state = hass.states[this.config.entity];
+        const entityId = this.config.entity;
+        const ui = this.getUI();
+        const card = document.createElement('ha-card');
+        card.className = 'fan-xiaomi'
+        card.appendChild(ui)
 
-            // Angle adjustment event bindings
-            ui.querySelector('.left').onmouseover = () => {
-                ui.querySelector('.left').classList.replace('hidden','show')
+        // Check if fan is disconnected
+        if (state === undefined || state.state === 'unavailable') {
+            card.classList.add('offline');
+            this.card = card;
+            this.appendChild(card);
+            ui.querySelector('.var-title').textContent = this.config.name + ' (Disconnected)';
+            return;
+        }
+
+        // Angle adjustment event bindings
+        ui.querySelector('.left').onmouseover = () => {
+            ui.querySelector('.left').classList.replace('hidden','show')
+        }
+        ui.querySelector('.left').onmouseout = () => {
+            ui.querySelector('.left').classList.replace('show','hidden')
+        }
+        ui.querySelector('.left').onclick = () => {
+            if (ui.querySelector('.fanbox').classList.contains('active')) {
+                this.log('Rotate left 5 degrees')
+                hass.callService('fan', 'set_direction', {
+                    entity_id: entityId,
+                    direction: "left"
+                });
             }
-            ui.querySelector('.left').onmouseout = () => {
-                ui.querySelector('.left').classList.replace('show','hidden')
+        }
+        ui.querySelector('.right').onmouseover = () => {
+            ui.querySelector('.right').classList.replace('hidden','show')
+        }
+        ui.querySelector('.right').onmouseout = () => {
+            ui.querySelector('.right').classList.replace('show','hidden')
+        }
+        ui.querySelector('.right').onclick = () => {
+            if (ui.querySelector('.fanbox').classList.contains('active')) {
+                this.log('Rotate right 5 degrees')
+                hass.callService('fan', 'set_direction', {
+                    entity_id: entityId,
+                    direction: "right"
+                });
             }
-            ui.querySelector('.left').onclick = () => {
-                if (ui.querySelector('.fanbox').classList.contains('active')) {
-                    this.log('Rotate left 5 degrees')
-                    hass.callService('fan', 'set_direction', {
+        }
+
+        // Power toggle event bindings
+        ui.querySelector('.c1').onclick = () => {
+            this.log('Toggle')
+            hass.callService('fan', 'toggle', {
+                entity_id: entityId
+            });
+        }
+
+        // Fan speed toggle event bindings
+        ui.querySelector('.var-speed').onclick = () => {
+            this.log('Speed Level')
+            if (ui.querySelector('.fanbox').classList.contains('active')) {
+                //let blades = ui.querySelector('.fanbox .blades')
+                let u = ui.querySelector('.var-speed')
+                //let iconSpan = u.querySelector('.icon-waper')
+                let icon = u.querySelector('.icon-waper > ha-icon').getAttribute('icon')
+                let newSpeedLevel
+                let newSpeed
+
+                let maskSpeedLevel = /mdi:numeric-(\d)-box-outline/g
+                let speedLevelMatch = maskSpeedLevel.exec(icon)
+                let speedLevel = parseInt(speedLevelMatch ? speedLevelMatch[1] : 1)
+                if (this.config.use_standard_speeds) {
+                    newSpeedLevel = this.supportedAttributes.speedList[(speedLevel < 
+                        this.supportedAttributes.speedList.length ? speedLevel: 0)]
+                    newSpeed = newSpeedLevel
+                } else {
+                    newSpeedLevel = (speedLevel < this.supportedAttributes.speedLevels ? speedLevel+1: 1)
+                    newSpeed = `Level ${newSpeedLevel}`
+                }
+                
+
+                this.log(`Set speed to: ${newSpeed}`)
+                hass.callService('fan', 'set_speed', {
+                    entity_id: entityId,
+                    speed: newSpeed
+                });
+            }
+        }
+
+        // Increase/Decrease speed level
+        ui.querySelector('.var-speedup').onclick = () => {
+            this.log('Speed Up');
+            hass.callService('fan', 'increase_speed', {
+                entity_id: entityId
+            });
+        }
+        ui.querySelector('.var-speeddown').onclick = () => {
+            this.log('Speed Up');
+            hass.callService('fan', 'decrease_speed', {
+                entity_id: entityId
+            });
+        }
+
+        // Fan angle toggle event bindings
+        ui.querySelector('.button-angle').onclick = () => {
+            this.log('Oscillation Angle')
+            if (ui.querySelector('.fanbox').classList.contains('active')) {
+                let b = ui.querySelector('.button-angle')
+                if (!b.classList.contains('loading')) {
+                    let u = ui.querySelector('.var-angle')
+                    let oldAngleText = u.innerHTML
+                    let newAngle
+                    let curAngleIndex = this.supportedAttributes.supported_angles.indexOf(parseInt(oldAngleText,10))
+                    if (curAngleIndex >= 0 && curAngleIndex < this.supportedAttributes.supported_angles.length-1) {
+                        newAngle = this.supportedAttributes.supported_angles[curAngleIndex+1]
+                    } else {
+                        newAngle = this.supportedAttributes.supported_angles[0]
+                    }
+                    b.classList.add('loading')
+
+                    this.log(`Set angle to: ${newAngle}`)
+                    hass.callService(this.config.platform, 'fan_set_oscillation_angle', {
                         entity_id: entityId,
-                        direction: "left"
+                        angle: newAngle
                     });
                 }
             }
-            ui.querySelector('.right').onmouseover = () => {
-                ui.querySelector('.right').classList.replace('hidden','show')
-            }
-            ui.querySelector('.right').onmouseout = () => {
-                ui.querySelector('.right').classList.replace('show','hidden')
-            }
-            ui.querySelector('.right').onclick = () => {
-                if (ui.querySelector('.fanbox').classList.contains('active')) {
-                    this.log('Rotate right 5 degrees')
-                    hass.callService('fan', 'set_direction', {
+        }
+
+        // Timer toggle event bindings
+        ui.querySelector('.button-timer').onclick = () => {
+            this.log('Timer')
+            if (ui.querySelector('.fanbox').classList.contains('active')) {
+                let b = ui.querySelector('.button-timer')
+                if (!b.classList.contains('loading')) {
+                    let u = ui.querySelector('.var-timer')
+
+                    let currTimer
+                    let hoursRegex = /(\d)h/g
+                    let minsRegex = /(\d{1,2})m/g
+                    let hoursMatch = hoursRegex.exec(u.textContent)
+                    let minsMatch = minsRegex.exec(u.textContent)
+                    let currHours = parseInt(hoursMatch ? hoursMatch[1] : '0')
+                    let currMins = parseInt(minsMatch ? minsMatch[1] : '0')
+                    currTimer = currHours * 60 + currMins
+
+                    let newTimer
+                    if (currTimer < 59) {
+                        newTimer = 60
+                    } else if (currTimer < 119) {
+                        newTimer = 120
+                    } else if (currTimer < 179) {
+                        newTimer = 180
+                    } else if (currTimer < 239) {
+                        newTimer = 240
+                    } else if (currTimer < 299) {
+                        newTimer = 300
+                    } else if (currTimer < 359) {
+                        newTimer = 360
+                    } else if (currTimer < 419) {
+                        newTimer = 420
+                    } else if (currTimer < 479) {
+                        newTimer = 480
+                    } else if (currTimer = 480) {
+                        newTimer = 0
+                    } else {
+                        this.error(`Error setting timer. u.textContent = ${u.textContent}; currTimer = ${currTimer}`)
+                        newTimer = 60
+                        this.error(`Defaulting to ${newTimer}`)
+                    }
+
+                    b.classList.add('loading')
+
+                    this.log(`Set timer to: ${newTimer}`)
+                    hass.callService(this.config.platform, 'fan_set_delay_off', {
                         entity_id: entityId,
-                        direction: "right"
+                        delay_off_countdown: newTimer
                     });
                 }
             }
+        }
+        
 
-            // Power toggle event bindings
-            ui.querySelector('.c1').onclick = () => {
+        // Child lock event bindings
+        ui.querySelector('.button-childlock').onclick = () => {
+            this.log('Child lock')
+            if (ui.querySelector('.fanbox').classList.contains('active')) {
+                let b = ui.querySelector('.button-childlock')
+                if (!b.classList.contains('loading')) {
+                    let u = ui.querySelector('.var-childlock')
+                    let oldChildLockState = u.innerHTML
+                    if (oldChildLockState === 'On') {
+                        this.log(`Set child lock to: Off`)
+                        hass.callService(this.config.platform, 'fan_set_child_lock_off')
+                    } else if (oldChildLockState === 'Off') {
+                        this.log(`Set child lock to: On`)
+                        hass.callService(this.config.platform, 'fan_set_child_lock_on')
+                    } else {
+                        this.error(`Error setting child lock. oldChildLockState = ${oldChildLockState}`)
+                        this.error(`Defaulting to Off`)
+                        hass.callService(this.config.platform, 'fan_set_child_lock_off')
+                        u.innerHTML = 'Off'
+                    }
+                    b.classList.add('loading')
+                }
+            }
+        }
+
+        // Natural mode event bindings
+        ui.querySelector('.var-natural').onclick = () => {
+            this.log('Natural')
+            if (ui.querySelector('.fanbox').classList.contains('active')) {
+                let u = ui.querySelector('.var-natural')
+                if (u.classList.contains('active') === false) {
+                    this.log(`Set natural mode to: On`)
+                    hass.callService(this.config.platform, 'fan_set_natural_mode_on', {
+                        entity_id: entityId
+                    });
+                } else {
+                    this.log(`Set natural mode to: Off`)
+                    hass.callService(this.config.platform, 'fan_set_natural_mode_off', {
+                        entity_id: entityId
+                    });
+                }
+            }
+        }
+
+        // Sleep mode event bindings
+        ui.querySelector('.var-sleep').onclick = () => {
+            this.log('Sleep')
+            if (ui.querySelector('.fanbox').classList.contains('active')) {
+                let u = ui.querySelector('.var-sleep')
+                if (u.classList.contains('active') === false) {
+                    this.log(`Set sleep mode to: On`)
+                    hass.callService('fan', 'set_percentage', {
+                        entity_id: entityId,
+                        percentage: 1
+                    });
+                } else {
+                    this.log(`Set sleep mode to: Off`)
+                    hass.callService('fan', 'set_speed', {
+                        entity_id: entityId,
+                        speed: 'low'
+                    });
+                }
+            }
+        }
+
+        // LED mode event bindings
+        ui.querySelector('.var-led').onclick = () => {
+            this.log('Led')
+            if (ui.querySelector('.fanbox').classList.contains('active')) {
+                let u = ui.querySelector('.var-led')
+                if (u.classList.contains('active') === false) {
+                    this.log(`Set led mode to: On`)
+                    hass.callService(this.config.platform, 'fan_set_led_on', {
+                        entity_id: entityId
+                    });
+                } else {
+                    this.log(`Set led mode to: Off`)
+                    hass.callService(this.config.platform, 'fan_set_led_off', {
+                        entity_id: entityId
+                    });
+                }
+            }
+        }
+
+        // Oscillation toggle event bindings
+        ui.querySelector('.var-oscillating').onclick = () => {
+            this.log('Oscillate')
+            if (ui.querySelector('.fanbox').classList.contains('active')) {
+                let u = ui.querySelector('.var-oscillating')
+                if (u.classList.contains('active') === false) {
+                    this.log(`Set oscillation to: On`)
+                    hass.callService('fan', 'oscillate', {
+                        entity_id: entityId,
+                        oscillating: true
+                    });
+                } else {
+                    this.log(`Set oscillation to: Off`)
+                    hass.callService('fan', 'oscillate', {
+                        entity_id: entityId,
+                        oscillating: false
+                    });
+                }
+            }
+        }
+        
+        //Fan title works as on/off button when animation is disabled
+        if (this.config.disable_animation) {
+            ui.querySelector('.var-title').onclick = () => {
                 this.log('Toggle')
                 hass.callService('fan', 'toggle', {
                     entity_id: entityId
                 });
             }
-
-            // Fan speed toggle event bindings
-            ui.querySelector('.var-speed').onclick = () => {
-                this.log('Speed Level')
-                if (ui.querySelector('.fanbox').classList.contains('active')) {
-                    //let blades = ui.querySelector('.fanbox .blades')
-                    let u = ui.querySelector('.var-speed')
-                    //let iconSpan = u.querySelector('.icon-waper')
-                    let icon = u.querySelector('.icon-waper > ha-icon').getAttribute('icon')
-                    let newSpeedLevel
-                    let newSpeed
-
-                    let maskSpeedLevel = /mdi:numeric-(\d)-box-outline/g
-                    let speedLevelMatch = maskSpeedLevel.exec(icon)
-                    let speedLevel = parseInt(speedLevelMatch ? speedLevelMatch[1] : 1)
-                    if (use_standard_speeds) {
-                        newSpeedLevel = this.supportedAttributes.speedList[(speedLevel < 
-                            this.supportedAttributes.speedList.length ? speedLevel: 0)]
-                        newSpeed = newSpeedLevel
-                    } else {
-                        newSpeedLevel = (speedLevel < this.supportedAttributes.speedLevels ? speedLevel+1: 1)
-                        newSpeed = `Level ${newSpeedLevel}`
-                    }
-                    
-
-                    this.log(`Set speed to: ${newSpeed}`)
-                    hass.callService('fan', 'set_speed', {
-                        entity_id: entityId,
-                        speed: newSpeed
-                    });
-                }
-            }
-
-
-            // Increase/Decrease speed level
-            ui.querySelector('.var-speedup').onclick = () => {
-                this.log('Speed Up');
-                hass.callService('fan', 'increase_speed', {
-                    entity_id: entityId
-                });
-            }
-            ui.querySelector('.var-speeddown').onclick = () => {
-                this.log('Speed Up');
-                hass.callService('fan', 'decrease_speed', {
-                    entity_id: entityId
-                });
-            }
-
-            // Fan angle toggle event bindings
-            ui.querySelector('.button-angle').onclick = () => {
-                this.log('Oscillation Angle')
-                if (ui.querySelector('.fanbox').classList.contains('active')) {
-                    let b = ui.querySelector('.button-angle')
-                    if (!b.classList.contains('loading')) {
-                        let u = ui.querySelector('.var-angle')
-                        let oldAngleText = u.innerHTML
-                        let newAngle
-                        let curAngleIndex = this.supportedAttributes.supported_angles.indexOf(parseInt(oldAngleText,10))
-                        if (curAngleIndex >= 0 && curAngleIndex < this.supportedAttributes.supported_angles.length-1) {
-                            newAngle = this.supportedAttributes.supported_angles[curAngleIndex+1]
-                        } else {
-                            newAngle = this.supportedAttributes.supported_angles[0]
-                        }
-                        b.classList.add('loading')
-
-                        this.log(`Set angle to: ${newAngle}`)
-                        hass.callService(platform, 'fan_set_oscillation_angle', {
-                            entity_id: entityId,
-                            angle: newAngle
-                        });
-                    }
-                }
-            }
-
-            // Timer toggle event bindings
-            ui.querySelector('.button-timer').onclick = () => {
-                this.log('Timer')
-                if (ui.querySelector('.fanbox').classList.contains('active')) {
-                    let b = ui.querySelector('.button-timer')
-                    if (!b.classList.contains('loading')) {
-                        let u = ui.querySelector('.var-timer')
-
-                        let currTimer
-                        let hoursRegex = /(\d)h/g
-                        let minsRegex = /(\d{1,2})m/g
-                        let hoursMatch = hoursRegex.exec(u.textContent)
-                        let minsMatch = minsRegex.exec(u.textContent)
-                        let currHours = parseInt(hoursMatch ? hoursMatch[1] : '0')
-                        let currMins = parseInt(minsMatch ? minsMatch[1] : '0')
-                        currTimer = currHours * 60 + currMins
-
-                        let newTimer
-                        if (currTimer < 59) {
-                            newTimer = 60
-                        } else if (currTimer < 119) {
-                            newTimer = 120
-                        } else if (currTimer < 179) {
-                            newTimer = 180
-                        } else if (currTimer < 239) {
-                            newTimer = 240
-                        } else if (currTimer < 299) {
-                            newTimer = 300
-                        } else if (currTimer < 359) {
-                            newTimer = 360
-                        } else if (currTimer < 419) {
-                            newTimer = 420
-                        } else if (currTimer < 479) {
-                            newTimer = 480
-                        } else if (currTimer = 480) {
-                            newTimer = 0
-                        } else {
-                            this.error(`Error setting timer. u.textContent = ${u.textContent}; currTimer = ${currTimer}`)
-                            newTimer = 60
-                            this.error(`Defaulting to ${newTimer}`)
-                        }
-
-                        b.classList.add('loading')
-
-                        this.log(`Set timer to: ${newTimer}`)
-                        hass.callService(platform, 'fan_set_delay_off', {
-                            entity_id: entityId,
-                            delay_off_countdown: newTimer
-                        });
-                    }
-                }
-            }
-            
-
-            // Child lock event bindings
-            ui.querySelector('.button-childlock').onclick = () => {
-                this.log('Child lock')
-                if (ui.querySelector('.fanbox').classList.contains('active')) {
-                    let b = ui.querySelector('.button-childlock')
-                    if (!b.classList.contains('loading')) {
-                        let u = ui.querySelector('.var-childlock')
-                        let oldChildLockState = u.innerHTML
-                        if (oldChildLockState === 'On') {
-                            this.log(`Set child lock to: Off`)
-                            hass.callService(platform, 'fan_set_child_lock_off')
-                        } else if (oldChildLockState === 'Off') {
-                            this.log(`Set child lock to: On`)
-                            hass.callService(platform, 'fan_set_child_lock_on')
-                        } else {
-                            this.error(`Error setting child lock. oldChildLockState = ${oldChildLockState}`)
-                            this.error(`Defaulting to Off`)
-                            hass.callService(platform, 'fan_set_child_lock_off')
-                            u.innerHTML = 'Off'
-                        }
-                        b.classList.add('loading')
-                    }
-                }
-            }
-
-            // Natural mode event bindings
-            ui.querySelector('.var-natural').onclick = () => {
-                this.log('Natural')
-                if (ui.querySelector('.fanbox').classList.contains('active')) {
-                    let u = ui.querySelector('.var-natural')
-                    if (u.classList.contains('active') === false) {
-                        this.log(`Set natural mode to: On`)
-                        hass.callService(platform, 'fan_set_natural_mode_on', {
-                            entity_id: entityId
-                        });
-                    } else {
-                        this.log(`Set natural mode to: Off`)
-                        hass.callService(platform, 'fan_set_natural_mode_off', {
-                            entity_id: entityId
-                        });
-                    }
-                }
-            }
-
-            // Sleep mode event bindings
-            ui.querySelector('.var-sleep').onclick = () => {
-                this.log('Sleep')
-                if (ui.querySelector('.fanbox').classList.contains('active')) {
-                    let u = ui.querySelector('.var-sleep')
-                    if (u.classList.contains('active') === false) {
-                        this.log(`Set sleep mode to: On`)
-                        hass.callService('fan', 'set_percentage', {
-                            entity_id: entityId,
-                            percentage: 1
-                        });
-                    } else {
-                        this.log(`Set sleep mode to: Off`)
-                        hass.callService('fan', 'set_speed', {
-                            entity_id: entityId,
-                            speed: 'low'
-                        });
-                    }
-                }
-            }
-
-            // LED mode event bindings
-            ui.querySelector('.var-led').onclick = () => {
-                this.log('Led')
-                if (ui.querySelector('.fanbox').classList.contains('active')) {
-                    let u = ui.querySelector('.var-led')
-                    if (u.classList.contains('active') === false) {
-                        this.log(`Set led mode to: On`)
-                        hass.callService(platform, 'fan_set_led_on', {
-                            entity_id: entityId
-                        });
-                    } else {
-                        this.log(`Set led mode to: Off`)
-                        hass.callService(platform, 'fan_set_led_off', {
-                            entity_id: entityId
-                        });
-                    }
-                }
-            }
-
-            // Oscillation toggle event bindings
-            ui.querySelector('.var-oscillating').onclick = () => {
-                this.log('Oscillate')
-                if (ui.querySelector('.fanbox').classList.contains('active')) {
-                    let u = ui.querySelector('.var-oscillating')
-                    if (u.classList.contains('active') === false) {
-                        this.log(`Set oscillation to: On`)
-                        hass.callService('fan', 'oscillate', {
-                            entity_id: entityId,
-                            oscillating: true
-                        });
-                    } else {
-                        this.log(`Set oscillation to: Off`)
-                        hass.callService('fan', 'oscillate', {
-                            entity_id: entityId,
-                            oscillating: false
-                        });
-                    }
-                }
-            }
-            
-            //Fan title works as on/off button when animation is disabled
-            if (this.config.disable_animation) {
-                ui.querySelector('.var-title').onclick = () => {
-                    this.log('Toggle')
-                    hass.callService('fan', 'toggle', {
-                        entity_id: entityId
-                    });
-                }
-            } else {
-                ui.querySelector('.var-title').onclick = () => {
-                    this.log('Dialog box')
-                    moreInfo(entityId);
-                }
-            }
-            /*
+        } else {
             ui.querySelector('.var-title').onclick = () => {
                 this.log('Dialog box')
-                card.querySelector('.dialog').style.display = 'block'
-            }*/
-            this.card = card;
-            this.innerHTML = '';
-            this.appendChild(card);
+                moreInfo(entityId);
+            }
+        }
+        /*
+        ui.querySelector('.var-title').onclick = () => {
+            this.log('Dialog box')
+            card.querySelector('.dialog').style.display = 'block'
+        }*/
+        this.card = card;
+        this.innerHTML = '';
+        this.appendChild(card);
+    }
+
+    updateUI(hass) {
+        const state = hass.states[this.config.entity];
+
+        if (state.state === 'unavailable') {
+            this.card.querySelector('.var-title').textContent = this.config.name + ' (Disconnected)';
+            return;
         }
 
-        // Set and update UI parameters
+        const attrs = state.attributes;
         this.setUI(this.card.querySelector('.fan-xiaomi-panel'), {
-            title: myname || attrs['friendly_name'],
+            title: this.config.name || attrs['friendly_name'],
             natural_speed: attrs['natural_speed'],
-            direct_speed: attrs['direct_speed'],
             raw_speed: attrs['raw_speed'],
             state: state.state,
             child_lock: attrs['child_lock'],
@@ -450,7 +467,7 @@ class FanXiaomi extends HTMLElement {
             mode: attrs['mode'],
             model: attrs['model'],
             led: attrs['led']
-        })
+        });
     }
 
     setConfig(config) {
@@ -474,7 +491,6 @@ class FanXiaomi extends HTMLElement {
 
     /*********************************** UI settings ************************************/
     getUI() {
-
         let csss='';
         for(var i=1;i<73;i++){
             csss+='.ang'+i+` {
@@ -659,7 +675,7 @@ LED
 
     // Define UI Parameters
 
-    setUI(fanboxa, {title, natural_speed, direct_speed, raw_speed, state,
+    setUI(fanboxa, {title, natural_speed, raw_speed, state,
         child_lock, oscillating, led_brightness, delay_off_countdown, angle,
         speed, mode, model, led
     }) {
@@ -743,8 +759,7 @@ LED
             } else {
                 activeElement.classList.remove('active')
             }
-        } else
-        {
+        } else {
             activeElement.style.display='none'
         }
 
@@ -793,9 +808,9 @@ LED
 
         // Natural mode
         activeElement = fanboxa.querySelector('.var-natural')
-        
+        if (this.supportedAttributes.natural_speed) {
          //p* fans do not report direct_speed and natural_speed
-        if (!this.supportedAttributes.natural_speed_reporting && this.supportedAttributes.natural_speed) {
+            if (!this.supportedAttributes.natural_speed_reporting) {
             if (mode === 'nature') {
                 natural_speed = true
             } else if (mode === 'normal') {
@@ -806,7 +821,6 @@ LED
                 this.error(`Defaulting to natural_speed = ${natural_speed}`)
             }
         }
-        if (this.supportedAttributes.natural_speed) {
             if (natural_speed) {
                 if (activeElement.classList.contains('active') === false) {
                     activeElement.classList.add('active')
@@ -814,8 +828,7 @@ LED
             } else {
                 activeElement.classList.remove('active')
             }
-        } else
-        {
+        } else {
             activeElement.style.display='none'
         }
 
@@ -829,8 +842,7 @@ LED
             } else {
                 activeElement.classList.remove('active')
             }
-        } else
-        {
+        } else {
             activeElement.style.display='none'
         }
 
@@ -891,15 +903,14 @@ LED
 
 customElements.define('fan-xiaomi', FanXiaomi);
 
-const OptionsPlatform = [
-  'xiaomi_miio_fan',
-  'xiaomi_miio_airpurifier',
-];
-
 class ContentCardEditor extends LitElement {
 
   setConfig(config) {
-    this.config = config;
+    this.config = {
+        // Merge over default config so we can guarantee we always have a complete config
+        ...defaultConfig,
+        ...config,
+    };
   }
 
   static get properties() {
