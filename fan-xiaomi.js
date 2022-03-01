@@ -64,6 +64,10 @@ class FanXiaomi extends HTMLElement {
     }
 
     set hass(hass) {
+        // Store most recent `hass` instance so we can update in the editor preview.
+        // This should only be used in setConfig()
+        this.mostRecentHass = hass;
+
         if (!this.card) {
             this.configure(hass)
             this.createCard(hass);
@@ -90,6 +94,18 @@ class FanXiaomi extends HTMLElement {
             this.supportedAttributes.supported_angles = [30, 60, 90, 120, 140];
             //this.supportedAttributes.led = true;
         }
+
+        //temp solution for FA1 fan until proper fan support is added in the upstream
+        if (['zhimi.fan.fa1'].includes(attrs['model'])){
+            this.supportedAttributes.speedIncreaseDecreaseButtons = true;
+            this.supportedAttributes.angle = false;
+            this.supportedAttributes.childLock = false;
+            this.supportedAttributes.rotationAngle = false;
+            this.supportedAttributes.speedLevels = 3;
+            this.supportedAttributes.natural_speed = false;
+            this.supportedAttributes.natural_speed_reporting = false;
+            this.supportedAttributes.timer = false;
+        }
         if (['dmaker.fan.p9'].includes(attrs['model'])){
             this.supportedAttributes.natural_speed_reporting = false;
             this.supportedAttributes.supported_angles = [30, 60, 90, 120, 150];
@@ -101,6 +117,9 @@ class FanXiaomi extends HTMLElement {
             this.supportedAttributes.natural_speed = false;
             this.supportedAttributes.natural_speed_reporting = false;
             this.supportedAttributes.sleep_mode = true;
+        }
+        if (['zhimi.fan.za5'].includes(attrs['model'])){
+            this.supportedAttributes.speedLevels = 3;
         }
 
         //trick to support of 'any' fan
@@ -200,6 +219,20 @@ class FanXiaomi extends HTMLElement {
                     speed: newSpeed
                 });
             }
+        }
+
+        // Increase/Decrease speed level
+        ui.querySelector('.var-speedup').onclick = () => {
+            this.log('Speed Up');
+            hass.callService('fan', 'increase_speed', {
+                entity_id: entityId
+            });
+        }
+        ui.querySelector('.var-speeddown').onclick = () => {
+            this.log('Speed Up');
+            hass.callService('fan', 'decrease_speed', {
+                entity_id: entityId
+            });
         }
 
         // Fan angle toggle event bindings
@@ -407,6 +440,7 @@ class FanXiaomi extends HTMLElement {
             card.querySelector('.dialog').style.display = 'block'
         }*/
         this.card = card;
+        this.innerHTML = '';
         this.appendChild(card);
     }
 
@@ -441,6 +475,12 @@ class FanXiaomi extends HTMLElement {
             throw new Error('You must specify an entity');
         }
         this.config = config;
+
+        // Force re-layout to update the preview
+        if (this.mostRecentHass) {
+            this.card = null;
+            this.hass = this.mostRecentHass;
+        }
     }
 
     // The height of your card. Home Assistant uses this to automatically
@@ -502,7 +542,7 @@ p{margin:0;padding:0}
 .c1{top:20%;left:20%;width:60%;height:60%;border:2px solid #fff;border-radius:50%;cursor:pointer;baskground:#ffffff00}
 .c1,.c2{position:absolute;box-sizing:border-box}
 .c2{top:0;left:0;width:100%;height:100%;border:10px solid #f7f7f7;border-radius:50%}
-.c3{position:absolute;top:40%;left:40%;box-sizing:border-box;width:20%;height:20%;border-radius:50%;background:#fff;color:#ddd}
+.c3{position:absolute;top:40%;left:40%;box-sizing:border-box;width:20%;height:20%;border-radius:50%;background:#fff;color:#ddd;border:2px solid white;line-height:24px}
 .c3.active{border:2px solid #8dd5c3}
 .c3 span ha-icon{width:100%;height:100%}
 .chevron{position:absolute;top:0;height:100%;opacity:0}
@@ -578,6 +618,24 @@ to{transform:perspective(10em) rotateY(40deg)}
 Speed
 </button>
 </div>
+
+<div class="op var-speedup">
+<button>
+<span class="icon-waper">
+<ha-icon icon="mdi:fan-chevron-up"></ha-icon>
+</span>
+Speed up
+</button>
+</div>
+<div class="op var-speeddown">
+<button>
+<span class="icon-waper">
+<ha-icon icon="mdi:fan-chevron-down"></ha-icon>
+</span>
+Speed down
+</button>
+</div>
+
 <div class="op var-oscillating">
 <button>
 <span class="icon-waper">
@@ -693,7 +751,7 @@ LED
             activeElement.classList.remove('active')
         }
         activeElement = fanboxa.querySelector('.var-led')
-        if (this.supportedAttributes.led) {
+        if (this.supportedAttributes.led && !this.config.hide_led_button) {
             if (led) {
                 if (activeElement.classList.contains('active') === false) {
                     activeElement.classList.add('active')
@@ -715,6 +773,7 @@ LED
             activeElement.classList.remove('active')
         }
 
+
         // Speed Level
         activeElement = fanboxa.querySelector('.var-speed')
         let iconSpan = activeElement.querySelector('.icon-waper')
@@ -725,6 +784,7 @@ LED
         } else {
             activeElement.classList.remove('active')
         }
+
         //let raw_speed_int = Number(raw_speed)
         let speedRegexpMatch
         let speedLevel
@@ -813,6 +873,19 @@ LED
             this.card.style.height = '170px'
         }
 
+        
+        if (!this.supportedAttributes.speedIncreaseDecreaseButtons) {
+            activeElement = fanboxa.querySelector('.var-speedup')
+            activeElement.style.display='none'
+            activeElement = fanboxa.querySelector('.var-speeddown')
+            activeElement.style.display='none'
+        } else {
+            activeElement = fanboxa.querySelector('.var-speed')
+            activeElement.style.display='none'
+            activeElement = fanboxa.querySelector('.var-oscillating')
+            activeElement.style.display='none'
+        }
+
     }
 /*********************************** UI Settings ************************************/
 
@@ -848,6 +921,9 @@ class ContentCardEditor extends LitElement {
   }
   render() {
     return html`
+    <style>
+        .row{padding-bottom:5px;}
+    </style>
     <div class="card-config">
     <div class="row">
     <paper-input
@@ -856,33 +932,6 @@ class ContentCardEditor extends LitElement {
           .configValue="${"name"}"
           @value-changed="${this._valueChanged}"
       ></paper-input>
-      </div>
-      <div class="row">
-      <ha-formfield label="Disable animation">
-        <ha-switch
-          .checked=${this.config.disable_animation}
-          .configValue="${'disable_animation'}"
-          @change=${this._valueChanged}
-        ></ha-switch>
-      </ha-formfield>
-      </div>
-      <div class="row">
-      <ha-formfield label="Use HA standard speeds (low/medium/high)">
-        <ha-switch
-          .checked=${this.config.use_standard_speeds}
-          .configValue="${'use_standard_speeds'}"
-          @change=${this._valueChanged}
-        ></ha-switch>
-      </ha-formfield>
-      </div>
-      <div class="row">
-      <ha-formfield label="Show sleep mode button">
-        <ha-switch
-          .checked=${this.config.force_sleep_mode_support}
-          .configValue="${'force_sleep_mode_support'}"
-          @change=${this._valueChanged}
-        ></ha-switch>
-      </ha-formfield>
       </div>
       <div class="row">
       <paper-dropdown-menu
@@ -913,6 +962,42 @@ class ContentCardEditor extends LitElement {
         @change=${this._valueChanged}
         allow-custom-entity
       ></ha-entity-picker>
+      </div>
+      <div class="row">
+      <ha-formfield label="Disable animation">
+        <ha-switch
+          .checked=${this.config.disable_animation}
+          .configValue="${'disable_animation'}"
+          @change=${this._valueChanged}
+        ></ha-switch>
+      </ha-formfield>
+      </div>
+      <div class="row">
+      <ha-formfield label="Use HA standard speeds (low/medium/high)">
+        <ha-switch
+          .checked=${this.config.use_standard_speeds}
+          .configValue="${'use_standard_speeds'}"
+          @change=${this._valueChanged}
+        ></ha-switch>
+      </ha-formfield>
+      </div>
+      <div class="row">
+      <ha-formfield label="Show sleep mode button">
+        <ha-switch
+          .checked=${this.config.force_sleep_mode_support}
+          .configValue="${'force_sleep_mode_support'}"
+          @change=${this._valueChanged}
+        ></ha-switch>
+      </ha-formfield>
+      </div>
+      <div class="row">
+      <ha-formfield label="Hide LED button (for supported devices)">
+        <ha-switch
+          .checked=${this.config.hide_led_button}
+          .configValue="${'hide_led_button'}"
+        @change=${this._valueChanged}
+        ></ha-switch>
+      </ha-formfield>
       </div>
     </div>
     `
