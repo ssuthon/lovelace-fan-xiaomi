@@ -555,7 +555,7 @@ class FanXiaomi extends HTMLElement {
             state: state.state,
             child_lock: this.child_lock_entity ? hass.states[this.child_lock_entity].state === 'on' : attrs['child_lock'],
             oscillating: attrs['oscillating'],
-            led_brightness: this.led_brightness_entity ? hass.states[this.led_brightness_entity].state : attrs['led_brightness'],
+            led_on: this.led_brightness_entity ? hass.states[this.led_brightness_entity].state > 0 : attrs['led_brightness'] < 2,
             delay_off_countdown: this.delay_off_entity ? hass.states[this.delay_off_entity].state : attrs['delay_off_countdown'],
             angle: this.oscillation_angle_entity ? Number(hass.states[this.oscillation_angle_entity].state) : attrs['angle'],
             speed: attrs['speed'],
@@ -781,7 +781,7 @@ LED
     // Define UI Parameters
 
     setUI(fanboxa, {title, natural_speed, raw_speed, state,
-        child_lock, oscillating, led_brightness, delay_off_countdown, angle,
+        child_lock, oscillating, led_on, delay_off_countdown, angle,
         speed, mode, model, led, temperature, humidity, power_supply
     }) {
         fanboxa.querySelector('.var-title').textContent = title
@@ -848,7 +848,7 @@ LED
 
         // LED
         let activeElement = fanboxa.querySelector('.c3')
-        if (led_brightness > 0) {
+        if (led_on) {
             if (activeElement.classList.contains('active') === false) {
                 activeElement.classList.add('active')
             }
