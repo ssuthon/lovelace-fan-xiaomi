@@ -30,6 +30,22 @@ function moreInfo(entity, large = false) {
     return el;
 }
 
+const OptionsPlatform = [
+    'default',
+    'xiaomi_miio_fan',
+    'xiaomi_miio_airpurifier',
+];
+
+const defaultConfig = { 
+    name: "",
+    platform: OptionsPlatform[0],
+    entity: "fan.fan",
+    disable_animation: false,
+    use_standard_speeds: false,
+    force_sleep_mode_support: false,
+    hide_led_button: false
+}
+
 class FanXiaomi extends HTMLElement {
     
     static getConfigElement() {
@@ -37,7 +53,10 @@ class FanXiaomi extends HTMLElement {
     }
     
     static getStubConfig() {
-        return { entity: "fan.fan", name: "Xiaomi Fan", platform: "xiaomi_miio_airpurifier", disable_animation: false }
+        return {
+            ...defaultConfig,
+            name: "Xiaomi Fan",
+        };
     }
     
     supportedAttributes = {
@@ -133,9 +152,7 @@ class FanXiaomi extends HTMLElement {
                 this.power_supply_entity = powerSupplyEntity.entity_id;
             }
         } else {
-            const entityId = this.config.entity;
-            //const style = this.config.style || '';
-            const state = hass.states[entityId];
+            const state = hass.states[this.config.entity];
             const attrs = state.attributes;
 
             if (['dmaker.fan.1c'].includes(attrs['model'])){
@@ -151,6 +168,18 @@ class FanXiaomi extends HTMLElement {
                 this.supportedAttributes.supported_angles = [30, 60, 90, 120, 140];
                 //this.supportedAttributes.led = true;
             }
+    
+            //temp solution for FA1 fan until proper fan support is added in the upstream
+            if (['zhimi.fan.fa1'].includes(attrs['model'])){
+                this.supportedAttributes.speedIncreaseDecreaseButtons = true;
+                this.supportedAttributes.angle = false;
+                this.supportedAttributes.childLock = false;
+                this.supportedAttributes.rotationAngle = false;
+                this.supportedAttributes.speedLevels = 3;
+                this.supportedAttributes.natural_speed = false;
+                this.supportedAttributes.natural_speed_reporting = false;
+                this.supportedAttributes.timer = false;
+            }
             if (['dmaker.fan.p9'].includes(attrs['model'])){
                 this.supportedAttributes.natural_speed_reporting = false;
                 this.supportedAttributes.supported_angles = [30, 60, 90, 120, 150];
@@ -163,7 +192,10 @@ class FanXiaomi extends HTMLElement {
                 this.supportedAttributes.natural_speed_reporting = false;
                 this.supportedAttributes.sleep_mode = true;
             }
-
+            if (['zhimi.fan.za5'].includes(attrs['model'])){
+                this.supportedAttributes.speedLevels = 3;
+            }
+    
             //trick to support of 'any' fan
             if (this.config.use_standard_speeds) {
                 this.supportedAttributes.speedList = ['low', 'medium', 'high']
@@ -263,6 +295,20 @@ class FanXiaomi extends HTMLElement {
             }
         }
 
+        // Increase/Decrease speed level
+        ui.querySelector('.var-speedup').onclick = () => {
+            this.log('Speed Up');
+            hass.callService('fan', 'increase_speed', {
+                entity_id: entityId
+            });
+        }
+        ui.querySelector('.var-speeddown').onclick = () => {
+            this.log('Speed Up');
+            hass.callService('fan', 'decrease_speed', {
+                entity_id: entityId
+            });
+        }
+
         // Fan angle toggle event bindings
         ui.querySelector('.button-angle').onclick = () => {
             this.log('Oscillation Angle')
@@ -287,10 +333,10 @@ class FanXiaomi extends HTMLElement {
                             value: newAngle
                         })
                     } else {
-                    hass.callService(this.config.platform, 'fan_set_oscillation_angle', {
-                        entity_id: entityId,
-                        angle: newAngle
-                    });
+                        hass.callService(this.config.platform, 'fan_set_oscillation_angle', {
+                            entity_id: entityId,
+                            angle: newAngle
+                        });
                     }
                 }
             }
@@ -428,7 +474,6 @@ class FanXiaomi extends HTMLElement {
                 }
             }
         }
-
         // LED mode event bindings
         ui.querySelector('.var-led').onclick = () => {
             this.log('Led')
@@ -544,7 +589,6 @@ class FanXiaomi extends HTMLElement {
 
     /*********************************** UI settings ************************************/
     getUI() {
-
         let csss='';
         for(var i=1;i<73;i++){
             csss+='.ang'+i+` {
@@ -679,6 +723,24 @@ to{transform:perspective(10em) rotateY(40deg)}
 Speed
 </button>
 </div>
+
+<div class="op var-speedup">
+<button>
+<span class="icon-waper">
+<ha-icon icon="mdi:fan-chevron-up"></ha-icon>
+</span>
+Speed up
+</button>
+</div>
+<div class="op var-speeddown">
+<button>
+<span class="icon-waper">
+<ha-icon icon="mdi:fan-chevron-down"></ha-icon>
+</span>
+Speed down
+</button>
+</div>
+
 <div class="op var-oscillating">
 <button>
 <span class="icon-waper">
@@ -802,8 +864,7 @@ LED
             } else {
                 activeElement.classList.remove('active')
             }
-        } else
-        {
+        } else {
             activeElement.style.display='none'
         }
 
@@ -817,6 +878,7 @@ LED
             activeElement.classList.remove('active')
         }
 
+
         // Speed Level
         activeElement = fanboxa.querySelector('.var-speed')
         let iconSpan = activeElement.querySelector('.icon-waper')
@@ -827,6 +889,7 @@ LED
         } else {
             activeElement.classList.remove('active')
         }
+
         //let raw_speed_int = Number(raw_speed)
         let speedRegexpMatch
         let speedLevel
@@ -909,6 +972,18 @@ LED
             fanboxa.querySelector('.right').style.display = 'none'
         }
 
+        if (!this.supportedAttributes.speedIncreaseDecreaseButtons) {
+            activeElement = fanboxa.querySelector('.var-speedup')
+            activeElement.style.display='none'
+            activeElement = fanboxa.querySelector('.var-speeddown')
+            activeElement.style.display='none'
+        } else {
+            activeElement = fanboxa.querySelector('.var-speed')
+            activeElement.style.display='none'
+            activeElement = fanboxa.querySelector('.var-oscillating')
+            activeElement.style.display='none'
+        }
+
         // Fan Animation
         if (this.config.disable_animation) {
             fanboxa.querySelector('.fanbox-container').style.display = 'none'
@@ -948,21 +1023,12 @@ LED
 
 customElements.define('fan-xiaomi', FanXiaomi);
 
-const OptionsPlatform = [
-  'default',
-  'xiaomi_miio_fan',
-  'xiaomi_miio_airpurifier',
-];
-
 class ContentCardEditor extends LitElement {
 
   setConfig(config) {
     this.config = {
-        name: "",
-        platform: OptionsPlatform[0],
-        use_standard_speeds: false,
-        force_sleep_mode_support: false,
-        hide_led_button: false,
+        // Merge over default config so we can guarantee we always have a complete config
+        ...defaultConfig,
         ...config,
     };
 
@@ -980,7 +1046,7 @@ class ContentCardEditor extends LitElement {
   render() {
     return html`
     <style>
-        .row{padding-bottom:4px;}
+        .row{padding-bottom:5px;}
     </style>
     <div class="card-config">
     <div class="row">
