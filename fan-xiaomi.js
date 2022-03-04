@@ -131,9 +131,15 @@ class FanXiaomi extends HTMLElement {
                 this.supportedAttributes.childLock = true;
             }
 
-            const ledEntity = deviceEntities.find(e => e.entity_id.startsWith("number.") && e.entity_id.endsWith("_led_brightness"));
-            if (ledEntity) {
-                this.led_brightness_entity = ledEntity.entity_id;
+            const numberLedEntity = deviceEntities.find(e => e.entity_id.startsWith("number.") && e.entity_id.endsWith("_led_brightness"));
+            if (numberLedEntity) {
+                this.number_led_brightness_entity = numberLedEntity.entity_id;
+                this.supportedAttributes.led = true;
+            }
+
+            const selectLedEntity = deviceEntities.find(e => e.entity_id.startsWith("select.") && e.entity_id.endsWith("_led_brightness"));
+            if (selectLedEntity) {
+                this.select_led_brightness_entity = selectLedEntity.entity_id;
                 this.supportedAttributes.led = true;
             }
 
@@ -481,11 +487,16 @@ class FanXiaomi extends HTMLElement {
                 let u = ui.querySelector('.var-led')
                 const setLedOn = !u.classList.contains('active');
                 this.log(`Set led mode to: ${setLedOn ? 'On' : 'Off'}`);
-                if (this.led_brightness_entity) {
+                if (this.number_led_brightness_entity) {
                     hass.callService('number', 'set_value', {
-                        entity_id: this.led_brightness_entity,
+                        entity_id: this.number_led_brightness_entity,
                         value: setLedOn ? 100 : 0
-                    })
+                    });
+                } else if (this.select_led_brightness_entity) {
+                    hass.callService('select', 'select_option', {
+                        entity_id: this.select_led_brightness_entity,
+                        value: setLedOn ? 0 : 2
+                    });
                 } else {
                     hass.callService(this.config.platform, setLedOn ? 'fan_set_led_on' : 'fan_set_led_off', {
                         entity_id: entityId
@@ -547,6 +558,12 @@ class FanXiaomi extends HTMLElement {
             return;
         }
 
+        const led_on = this.number_led_brightness_entity ?
+            hass.states[this.number_led_brightness_entity].state > 0 :
+            (this.select_led_brightness_entity ?
+                hass.states[this.number_led_brightness_entity].state :
+                attrs['led_brightness']) < 2;
+
         const attrs = state.attributes;
         this.setUI(this.card.querySelector('.fan-xiaomi-panel'), {
             title: this.config.name || attrs['friendly_name'],
@@ -555,13 +572,13 @@ class FanXiaomi extends HTMLElement {
             state: state.state,
             child_lock: this.child_lock_entity ? hass.states[this.child_lock_entity].state === 'on' : attrs['child_lock'],
             oscillating: attrs['oscillating'],
-            led_on: this.led_brightness_entity ? hass.states[this.led_brightness_entity].state > 0 : attrs['led_brightness'] < 2,
+            led_on,
             delay_off_countdown: this.delay_off_entity ? hass.states[this.delay_off_entity].state : attrs['delay_off_countdown'],
             angle: this.oscillation_angle_entity ? Number(hass.states[this.oscillation_angle_entity].state) : attrs['angle'],
             speed: attrs['speed'],
             mode: this.config.platform === 'default' ? attrs['preset_mode'].toLowerCase() : attrs['mode'],
             model: attrs['model'],
-            led: this.led_brightness_entity ? hass.states[this.led_brightness_entity].state > 0 : attrs['led'],
+            led: this.number_led_brightness_entity ? hass.states[this.number_led_brightness_entity].state > 0 : attrs['led'],
             temperature: this.temp_sensor_entity ? hass.states[this.temp_sensor_entity].state : undefined,
             humidity: this.humidity_sensor_entity ? hass.states[this.humidity_sensor_entity].state : undefined,
             power_supply: this.power_supply_entity ? hass.states[this.power_supply_entity].state === 'on' : undefined,
