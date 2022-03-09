@@ -552,6 +552,7 @@ class FanXiaomi extends HTMLElement {
 
     updateUI(hass) {
         const state = hass.states[this.config.entity];
+        const attrs = state.attributes;
 
         if (state.state === 'unavailable') {
             this.card.querySelector('.var-title').textContent = this.config.name + ' (Disconnected)';
@@ -564,7 +565,6 @@ class FanXiaomi extends HTMLElement {
                 hass.states[this.number_led_brightness_entity].state :
                 attrs['led_brightness']) < 2;
 
-        const attrs = state.attributes;
         this.setUI(this.card.querySelector('.fan-xiaomi-panel'), {
             title: this.config.name || attrs['friendly_name'],
             natural_speed: attrs['natural_speed'],
