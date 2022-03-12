@@ -35,7 +35,7 @@ const OptionsPlatform = [
     'xiaomi_miio_fan',
 ];
 
-const defaultConfig = { 
+const defaultConfig = {
     name: "",
     platform: OptionsPlatform[0],
     entity: "fan.fan",
@@ -46,11 +46,11 @@ const defaultConfig = {
 }
 
 class FanXiaomi extends HTMLElement {
-    
+
     static getConfigElement() {
         return document.createElement("content-card-editor");
     }
-    
+
     static getStubConfig() {
         return {
             ...defaultConfig,
@@ -59,7 +59,7 @@ class FanXiaomi extends HTMLElement {
     }
 
     supportedAttributes = {
-        angle: true, childLock: true, timer: true, rotationAngle: true, speedLevels: 4, 
+        angle: true, childLock: true, timer: true, rotationAngle: true, speedLevels: 4,
         naturalSpeed: true, supportedAngles: [30, 60, 90, 120], sleepMode: false, led: false
     }
 
@@ -193,7 +193,7 @@ class FanXiaomi extends HTMLElement {
     getSpeed(hass) {
         return hass.states[this.config.entity].attributes['speed'];
     }
-    
+
     getSpeedPercentage(hass) {
         return hass.states[this.config.entity].attributes['percentage'];
     }
@@ -400,18 +400,11 @@ class FanXiaomi extends HTMLElement {
             const state = hass.states[this.config.entity];
             const attrs = state.attributes;
 
-            if (['dmaker.fan.1c'].includes(attrs['model'])){
-                this.supportedAttributes.angle = false;
-                this.supportedAttributes.childLock = true;
-                this.supportedAttributes.rotationAngle = false;
-                this.supportedAttributes.speedLevels = 3;
-                this.supportedAttributes.naturalSpeed = true;
-            }
-            if (['dmaker.fan.p15', 'dmaker.fan.p11', 'dmaker.fan.p10', 'dmaker.fan.p5'].includes(attrs['model'])){
+            if (['dmaker.fan.p15'].includes(attrs['model'])){
                 this.supportedAttributes.supportedAngles = [30, 60, 90, 120, 140];
                 //this.supportedAttributes.led = true;
             }
-    
+
             //temp solution for FA1 fan until proper fan support is added in the upstream
             if (['zhimi.fan.fa1'].includes(attrs['model'])){
                 this.supportedAttributes.speedIncreaseDecreaseButtons = true;
@@ -422,9 +415,6 @@ class FanXiaomi extends HTMLElement {
                 this.supportedAttributes.naturalSpeed = false;
                 this.supportedAttributes.timer = false;
             }
-            if (['dmaker.fan.p9'].includes(attrs['model'])){
-                this.supportedAttributes.supportedAngles = [30, 60, 90, 120, 150];
-            }
             if (['leshow.fan.ss4'].includes(attrs['model'])){
                 this.supportedAttributes.angle = false;
                 this.supportedAttributes.childLock = false;
@@ -432,10 +422,7 @@ class FanXiaomi extends HTMLElement {
                 this.supportedAttributes.naturalSpeed = false;
                 this.supportedAttributes.sleepMode = true;
             }
-            if (['zhimi.fan.za5'].includes(attrs['model'])){
-                this.supportedAttributes.speedLevels = 3;
-            }
-    
+
             //trick to support of 'any' fan
             if (this.config.use_standard_speeds) {
                 this.supportedAttributes.speedList = ['low', 'medium', 'high']
@@ -518,14 +505,14 @@ class FanXiaomi extends HTMLElement {
                 let speedLevelMatch = maskSpeedLevel.exec(icon)
                 let speedLevel = parseInt(speedLevelMatch ? speedLevelMatch[1] : 1)
                 if (this.config.use_standard_speeds || this.config.platform === 'default') {
-                    newSpeedLevel = this.supportedAttributes.speedList[(speedLevel < 
+                    newSpeedLevel = this.supportedAttributes.speedList[(speedLevel <
                         this.supportedAttributes.speedList.length ? speedLevel: 0)]
                     newSpeed = newSpeedLevel
                 } else {
                     newSpeedLevel = (speedLevel < this.supportedAttributes.speedLevels ? speedLevel+1: 1)
                     newSpeed = `Level ${newSpeedLevel}`
                 }
-                
+
 
                 this.log(`Set speed to: ${newSpeed}`)
                 this.setSpeed(hass, newSpeed);
@@ -690,7 +677,7 @@ class FanXiaomi extends HTMLElement {
                 this.setOscillation(hass, setOscillationOn);
             }
         }
-        
+
         //Fan title works as on/off button when animation is disabled
         if (this.config.disable_animation) {
             ui.querySelector('.var-title').onclick = () => {
@@ -957,8 +944,8 @@ LED
 
     // Define UI Parameters
 
-    setUI(fanboxa, {title, speed_percentage, state, child_lock, oscillating, 
-        delay_off_countdown, angle, speed, preset_mode, model, led, 
+    setUI(fanboxa, {title, speed_percentage, state, child_lock, oscillating,
+        delay_off_countdown, angle, speed, preset_mode, model, led,
         temperature, humidity, power_supply
     }) {
         fanboxa.querySelector('.var-title').textContent = title
@@ -976,7 +963,7 @@ LED
         } else {
             fanboxa.querySelector('.button-childlock').style.display = 'none'
         }
-        
+
         // Angle
         if (this.supportedAttributes.angle){
             if (needSeparatorFlag)
@@ -997,9 +984,8 @@ LED
             let timer_display = 'Off'
             if(delay_off_countdown) {
                 let total_mins = delay_off_countdown
-                
-                if (['dmaker.fan.p15', 'dmaker.fan.p11', 'dmaker.fan.p10', 'dmaker.fan.p9', 'dmaker.fan.p5']
-                    .indexOf(model) === -1) {
+
+                if (model === 'dmaker.fan.p15') {
                     total_mins = total_mins / 60
                 }
 
@@ -1296,7 +1282,7 @@ class ContentCardEditor extends LitElement {
   _focusEntity(e){
     e.target.value = ''
   }
-  
+
   _valueChanged(e) {
     if (!this.config || !this.hass) {
       return;
