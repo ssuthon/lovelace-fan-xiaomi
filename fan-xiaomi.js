@@ -201,14 +201,14 @@ class FanXiaomi extends HTMLElement {
         if (this.config.platform === 'default') {
             const attributes = hass.states[this.config.entity].attributes;
             const allEntities = await hass.callWS({ type: "config/entity_registry/list" });
-            const fanEntity = allEntities.find(e => e.entity_id === this.config.entity)
+            const fanEntity = allEntities.find(e => e.entity_id === this.config.entity);
             if (!fanEntity) {
                 return
             }
             const deviceEntities = allEntities.filter(e => e.device_id === fanEntity.device_id);
-            this.checkFanFeatures(attributes)
-            this.checkFanAuxFeatures(hass, deviceEntities)
-            this.checkFanAuxSensors(deviceEntities)
+            this.checkFanFeatures(attributes);
+            this.checkFanAuxFeatures(hass, deviceEntities);
+            this.checkFanAuxSensors(deviceEntities);
         } else {
             const state = hass.states[this.config.entity];
             const attrs = state.attributes;
