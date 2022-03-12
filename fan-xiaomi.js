@@ -559,7 +559,7 @@ class FanXiaomi extends HTMLElement {
             return;
         }
 
-        const led_on = this.number_led_brightness_entity ?
+        const led = this.number_led_brightness_entity ?
             hass.states[this.number_led_brightness_entity].state > 0 :
             (this.select_led_brightness_entity ?
                 hass.states[this.select_led_brightness_entity].state != 'off':
@@ -572,13 +572,12 @@ class FanXiaomi extends HTMLElement {
             state: state.state,
             child_lock: this.child_lock_entity ? hass.states[this.child_lock_entity].state === 'on' : attrs['child_lock'],
             oscillating: attrs['oscillating'],
-            led_on,
             delay_off_countdown: this.delay_off_entity ? hass.states[this.delay_off_entity].state : attrs['delay_off_countdown'],
             angle: this.oscillation_angle_entity ? Number(hass.states[this.oscillation_angle_entity].state) : attrs['angle'],
             speed: attrs['speed'],
             mode: this.config.platform === 'default' ? attrs['preset_mode'].toLowerCase() : attrs['mode'],
             model: attrs['model'],
-            led: this.number_led_brightness_entity ? hass.states[this.number_led_brightness_entity].state > 0 : attrs['led'],
+            led: led,
             temperature: this.temp_sensor_entity ? hass.states[this.temp_sensor_entity].state : undefined,
             humidity: this.humidity_sensor_entity ? hass.states[this.humidity_sensor_entity].state : undefined,
             power_supply: this.power_supply_entity ? hass.states[this.power_supply_entity].state === 'on' : undefined,
@@ -798,7 +797,7 @@ LED
     // Define UI Parameters
 
     setUI(fanboxa, {title, natural_speed, raw_speed, state,
-        child_lock, oscillating, led_on, delay_off_countdown, angle,
+        child_lock, oscillating, delay_off_countdown, angle,
         speed, mode, model, led, temperature, humidity, power_supply
     }) {
         fanboxa.querySelector('.var-title').textContent = title
@@ -865,12 +864,14 @@ LED
 
         // LED
         let activeElement = fanboxa.querySelector('.c3')
-        if (led_on) {
-            if (activeElement.classList.contains('active') === false) {
-                activeElement.classList.add('active')
+        if (this.supportedAttributes.led) {
+            if (led) {
+                if (activeElement.classList.contains('active') === false) {
+                    activeElement.classList.add('active')
+                }
+            } else {
+                activeElement.classList.remove('active')
             }
-        } else {
-            activeElement.classList.remove('active')
         }
         activeElement = fanboxa.querySelector('.var-led')
         if (this.supportedAttributes.led && !this.config.hide_led_button) {
