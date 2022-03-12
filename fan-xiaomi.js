@@ -76,11 +76,11 @@ class FanXiaomi extends HTMLElement {
             prefix: 'number.',
             suffix: '_delay_off_countdown'
         },
-        ledBrightnessNumber: {
+        ledNumber: {
             prefix: 'number.',
             suffix: '_led_brightness'
         },
-        ledBrightnessSelect: {
+        ledSelect: {
             prefix: 'select.',
             suffix: '_led_brightness'
         },
@@ -165,15 +165,15 @@ class FanXiaomi extends HTMLElement {
         }
 
         // TODO: Remember entity type
-        const numberLedEntity = this.getAuxEntity(deviceEntities, this.entityFilters['ledBrightnessNumber']);
+        const numberLedEntity = this.getAuxEntity(deviceEntities, this.entityFilters['ledNumber']);
         if (numberLedEntity) {
-            this.numberLedBrightnessEntity = numberLedEntity.entity_id;
+            this.numberLedEntity = numberLedEntity.entity_id;
             this.supportedAttributes.led = true;
         }
 
-        const selectLedEntity = this.getAuxEntity(deviceEntities, this.entityFilters['ledBrightnessSelect']);
+        const selectLedEntity = this.getAuxEntity(deviceEntities, this.entityFilters['ledSelect']);
         if (selectLedEntity) {
-            this.selectLedBrightnessEntity = selectLedEntity.entity_id;
+            this.selectLedEntity = selectLedEntity.entity_id;
             this.supportedAttributes.led = true;
         }
 
@@ -543,14 +543,14 @@ class FanXiaomi extends HTMLElement {
                 let u = ui.querySelector('.var-led')
                 const setLedOn = !u.classList.contains('active');
                 this.log(`Set led mode to: ${setLedOn ? 'On' : 'Off'}`);
-                if (this.numberLedBrightnessEntity) {
+                if (this.numberLedEntity) {
                     hass.callService('number', 'set_value', {
-                        entity_id: this.numberLedBrightnessEntity,
+                        entity_id: this.numberLedEntity,
                         value: setLedOn ? 100 : 0
                     });
-                } else if (this.selectLedBrightnessEntity) {
+                } else if (this.selectLedEntity) {
                     hass.callService('select', 'select_option', {
-                        entity_id: this.selectLedBrightnessEntity,
+                        entity_id: this.selectLedEntity,
                         option: setLedOn ? 'bright' : 'off'
                     });
                 } else {
@@ -618,10 +618,10 @@ class FanXiaomi extends HTMLElement {
             return;
         }
 
-        const led = this.numberLedBrightnessEntity ?
-            hass.states[this.numberLedBrightnessEntity].state > 0 :
-            (this.selectLedBrightnessEntity ?
-                hass.states[this.selectLedBrightnessEntity].state != 'off':
+        const led = this.numberLedEntity ?
+            hass.states[this.numberLedEntity].state > 0 :
+            (this.selectLedEntity ?
+                hass.states[this.selectLedEntity].state != 'off':
                 attrs['led_brightness'] < 2);
 
         this.setUI(this.card.querySelector('.fan-xiaomi-panel'), {
