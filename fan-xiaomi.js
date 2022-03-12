@@ -99,7 +99,7 @@ class FanXiaomi extends HTMLElement {
     }
 
     getAuxEntity(entities, entityFilter) {
-        return entities.find(e => e.entity_id.startsWith(entityFilter[prefix]) && e.entity_id.endsWith(entityFilter[suffix]))
+        return entities.find(e => e.entity_id.startsWith(entityFilter['prefix']) && e.entity_id.endsWith(entityFilter['suffix']))
     }
 
     set hass(hass) {
