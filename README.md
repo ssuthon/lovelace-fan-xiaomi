@@ -21,9 +21,9 @@ Xiaomi Smartmi Fan Lovelace card for HASS/Home Assistant.
 - Timer duration
 
 ## Requirements
-Either of these two integrations can be used:
-- [Xiaomi Mi Smart Pedestal Fan Integration](https://github.com/syssi/xiaomi_fan) v0.3.3
-- [Xiaomi Mi Air Purifier & Xiaomi Mi Air Humidifier Integration](https://github.com/syssi/xiaomi_airpurifier) v0.6.9
+By default, the **Xiaomi Miio** native integration will be used. 
+
+If you have a model that's not supported by the native integration yet, this card also supports the [Xiaomi Mi Smart Pedestal Fan](https://github.com/syssi/xiaomi_fan) integration.
 
 ## HACS Installation
 Search for `Xiaomi Smartmi Fan Card`
@@ -39,7 +39,6 @@ Search for `Xiaomi Smartmi Fan Card`
     ```
     
 ## Card Configuration
-
 Example of Lovelace config `views.cards` key
 ```yaml
 entity: fan.entity_id
@@ -47,15 +46,16 @@ name: Fan Name
 type: 'custom:fan-xiaomi'
 platform: xiaomi_miio_airpurifier
 ```
-| Card attribute          | Default                | Description                                     |
-|-------------------------|------------------------|-------------------------------------------------|
-| `entity_id`             |      n\a               | Mandatory: Specify Xiaomi miio fan entity_id               |
-| `name`                  |      n\a               | Optional: Fan name to be show for on card                 |
-| `type`                  | `custom:fan-xiaomi`    | Mandatory: card type specification               |
-| `disable_animation`     | `False`                | Optional: Flag that defines whether to disable fan image  |
-| `use_standard_speeds`  | `False`                | Optional: Use low/medium/high speeds instead of Level 1-3/4 for fans. This can be enabled, if fan is not yet properly supported by this card. |
-| `force_sleep_mode_support`  | `False`                | Optional: Enables display of Sleep button in UI, which sets speed to 1% |
-| `platform`              | `xiaomi_miio_fan`      | Optional: For [Xiaomi Mi Air Purifier & Xiaomi Mi Air Humidifier Integration](https://github.com/syssi/xiaomi_airpurifier) you must specify `xiaomi_miio_airpurifier`, if [Xiaomi Mi Smart Pedestal Fan Integration](https://github.com/syssi/xiaomi_fan) is used then can specify `xiaomi_miio_fan` or can ommit it. |
+| Card attribute             | Default   | Description                                                                                          |
+| -------------------------- | --------- | ---------------------------------------------------------------------------------------------------- |
+| `entity_id`                | -         | `entity_id` of your fan                                                                              |
+| `type`                     | -         | Must be `custom:fan-xiaomi`                                                                          |
+| `name`                     | -         | (Optional) Fan name shown on card title                                                              |
+| `platform`                 | `default` | (Optional) If using Xiaomi Mi Smart Pedestal Fan integration, specify `xiaomi_miio_fan`.             |
+| `disable_animation`        | `False`   | (Optional) Disable fan image and animation                                                           |
+| `use_standard_speeds`      | `False`   | (Optional) Use `low`/`medium`/`high` speeds, if you have issues using this card with your fan model. |
+| `force_sleep_mode_support` | `False`   | (Optional) Enables Sleep button in UI which sets speed to 1%                                         |
+| `hide_led_button`          | `False`   | (Optional) Hide LED toggle for supported models                                                      |
 
 ## Preview
 ![](preview.gif)

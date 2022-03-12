@@ -33,7 +33,6 @@ function moreInfo(entity, large = false) {
 const OptionsPlatform = [
     'default',
     'xiaomi_miio_fan',
-    'xiaomi_miio_airpurifier',
 ];
 
 const defaultConfig = { 
