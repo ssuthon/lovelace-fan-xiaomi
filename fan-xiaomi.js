@@ -84,6 +84,10 @@ class FanXiaomi extends HTMLElement {
             prefix: 'select.',
             suffix: '_led_brightness'
         },
+        ledSwitch: {
+            prefix: 'switch.',
+            suffix: '_led'
+        },
         temperature: {
             prefix: 'sensor.',
             suffix: '_temperature'
@@ -113,6 +117,16 @@ class FanXiaomi extends HTMLElement {
                 entity_id: this.selectLedEntity,
                 option: on ? 'bright' : 'off'
             });
+        } else if (this.switchLedEntity) {
+            if (on) {
+                this.hass.callService('switch', 'turn_on', {
+                    entity_id: this.switchLedEntity,
+                });
+            } else {
+                this.hass.callService('switch', 'turn_off', {
+                    entity_id: this.switchLedEntity,
+                });
+            }
         } else {
             this.hass.callService('xiaomi_miio_fan', on ? 'fan_set_led_on' : 'fan_set_led_off', {
                 entity_id: this.config.entity
@@ -195,7 +209,11 @@ class FanXiaomi extends HTMLElement {
             this.supportedAttributes.led = true;
         }
 
-        // TODO Add switch type
+        const switchLedEntity = this.getAuxEntity(deviceEntities, this.entityFilters['ledSwitch']);
+        if (switchLedEntity) {
+            this.switchLedEntity = switchLedEntity.entity_id;
+            this.supportedAttributes.led = true;
+        }
     }
 
     checkFanAuxSensors(deviceEntities) {
