@@ -495,7 +495,7 @@ class FanXiaomi extends HTMLElement {
                 } else if (this.select_led_brightness_entity) {
                     hass.callService('select', 'select_option', {
                         entity_id: this.select_led_brightness_entity,
-                        value: setLedOn ? 'bright' : 'off'
+                        option: setLedOn ? 'bright' : 'off'
                     });
                 } else {
                     hass.callService(this.config.platform, setLedOn ? 'fan_set_led_on' : 'fan_set_led_off', {
