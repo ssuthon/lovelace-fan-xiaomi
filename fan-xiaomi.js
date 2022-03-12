@@ -562,7 +562,7 @@ class FanXiaomi extends HTMLElement {
         const led_on = this.number_led_brightness_entity ?
             hass.states[this.number_led_brightness_entity].state > 0 :
             (this.select_led_brightness_entity ?
-                hass.states[this.number_led_brightness_entity].state :
+                hass.states[this.select_led_brightness_entity].state != 'off':
                 attrs['led_brightness']) < 2;
 
         this.setUI(this.card.querySelector('.fan-xiaomi-panel'), {
