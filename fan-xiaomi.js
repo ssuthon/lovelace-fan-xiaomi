@@ -723,7 +723,6 @@ class FanXiaomi extends HTMLElement {
 
         this.setUI(this.card.querySelector('.fan-xiaomi-panel'), {
             title: this.config.name || attrs['friendly_name'],
-            natural_speed: attrs['natural_speed'],
             speed_percentage: this.getSpeedPercentage(hass),
             state: entity.state,
             child_lock: this.getChildLock(hass),
@@ -952,9 +951,9 @@ LED
 
     // Define UI Parameters
 
-    setUI(fanboxa, {title, natural_speed, speed_percentage, state,
-        child_lock, oscillating, delay_off_countdown, angle,
-        speed, preset_mode, model, led, temperature, humidity, power_supply
+    setUI(fanboxa, {title, speed_percentage, state, child_lock, oscillating, 
+        delay_off_countdown, angle, speed, preset_mode, model, led, 
+        temperature, humidity, power_supply
     }) {
         fanboxa.querySelector('.var-title').textContent = title
 
