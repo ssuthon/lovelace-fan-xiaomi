@@ -102,6 +102,24 @@ class FanXiaomi extends HTMLElement {
         return entities.find(e => e.entity_id.startsWith(entityFilter['prefix']) && e.entity_id.endsWith(entityFilter['suffix']))
     }
 
+    setLed(on) {
+        if (this.numberLedEntity) {
+            this.hass.callService('number', 'set_value', {
+                entity_id: this.numberLedEntity,
+                value: on ? 100 : 0
+            });
+        } else if (this.selectLedEntity) {
+            this.hass.callService('select', 'select_option', {
+                entity_id: this.selectLedEntity,
+                option: on ? 'bright' : 'off'
+            });
+        } else {
+            this.hass.callService('xiaomi_miio_fan', on ? 'fan_set_led_on' : 'fan_set_led_off', {
+                entity_id: this.config.entity
+            });
+        }
+    }
+
     set hass(hass) {
         // Store most recent `hass` instance so we can update in the editor preview.
         // This should only be used in setConfig()
@@ -543,21 +561,7 @@ class FanXiaomi extends HTMLElement {
                 let u = ui.querySelector('.var-led')
                 const setLedOn = !u.classList.contains('active');
                 this.log(`Set led mode to: ${setLedOn ? 'On' : 'Off'}`);
-                if (this.numberLedEntity) {
-                    hass.callService('number', 'set_value', {
-                        entity_id: this.numberLedEntity,
-                        value: setLedOn ? 100 : 0
-                    });
-                } else if (this.selectLedEntity) {
-                    hass.callService('select', 'select_option', {
-                        entity_id: this.selectLedEntity,
-                        option: setLedOn ? 'bright' : 'off'
-                    });
-                } else {
-                    hass.callService(this.config.platform, setLedOn ? 'fan_set_led_on' : 'fan_set_led_off', {
-                        entity_id: entityId
-                    });
-                }
+                this.setLed(setLedOn)
             }
         }
 
