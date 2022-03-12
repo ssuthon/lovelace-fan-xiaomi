@@ -180,7 +180,7 @@ class FanXiaomi extends HTMLElement {
         // TODO Add switch type
     }
 
-    checkFanSensors(deviceEntities) {
+    checkFanAuxSensors(deviceEntities) {
         const tempSensorEntity = this.getAuxEntity(deviceEntities, this.entityFilters['temperature']);
         if (tempSensorEntity) {
             this.temperatureEntity = tempSensorEntity.entity_id;
@@ -208,7 +208,7 @@ class FanXiaomi extends HTMLElement {
             const deviceEntities = allEntities.filter(e => e.device_id === fanEntity.device_id);
             this.checkFanFeatures(attributes)
             this.checkFanAuxFeatures(hass, deviceEntities)
-            this.checkFanSensors(deviceEntities)
+            this.checkFanAuxSensors(deviceEntities)
         } else {
             const state = hass.states[this.config.entity];
             const attrs = state.attributes;
