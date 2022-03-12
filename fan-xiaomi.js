@@ -63,6 +63,45 @@ class FanXiaomi extends HTMLElement {
             natural_speed_reporting: true, supported_angles: [30, 60, 90, 120], sleep_mode: false, led: false
     }
 
+    entityFilters = {
+        angle: {
+            prefix: 'number.',
+            suffix: '_oscillation_angle'
+        },
+        childLock: {
+            prefix: 'switch.',
+            suffix: 'child_lock'
+        },
+        timer: {
+            prefix: 'number.',
+            suffix: '_delay_off_countdown'
+        },
+        ledBrightnessNumber: {
+            prefix: 'number.',
+            suffix: 'led_brightness'
+        },
+        ledBrightnessSelect: {
+            prefix: 'select.',
+            suffix: 'led_brightness'
+        },
+        temperature: {
+            prefix: 'sensor.',
+            suffix: '_temperature'
+        },
+        humidity: {
+            prefix: 'sensor.',
+            suffix: '_humidity'
+        },
+        powerSupply: {
+            prefix: 'binary_sensor.',
+            suffix: '_power_supply'
+        }
+    }
+
+    getAuxEntity(entities, entityFilter) {
+        return entities.find(e => e.entity_id.startsWith(entityFilter[prefix]) && e.entity_id.endsWith(entityFilter[suffix]))
+    }
+
     set hass(hass) {
         // Store most recent `hass` instance so we can update in the editor preview.
         // This should only be used in setConfig()
@@ -99,7 +138,7 @@ class FanXiaomi extends HTMLElement {
     }
 
     checkFanAuxFeatures(hass, deviceEntities) {
-        const oscillationEntity = deviceEntities.find(e => e.entity_id.startsWith("number.") && e.entity_id.endsWith("_oscillation_angle"));
+        const oscillationEntity = this.getAuxEntity(deviceEntities, this.entityFilters['angle']);
             if (oscillationEntity) {
                 this.oscillation_angle_entity = oscillationEntity.entity_id;
                 this.supportedAttributes.angle = true;
@@ -113,26 +152,26 @@ class FanXiaomi extends HTMLElement {
                 }
             }
 
-        const delayEntity = deviceEntities.find(e => e.entity_id.startsWith("number.") && e.entity_id.endsWith("_delay_off_countdown"));
+        const delayEntity = this.getAuxEntity(deviceEntities, this.entityFilters['timer']);
         if (delayEntity) {
             this.delay_off_entity = delayEntity.entity_id;
             this.supportedAttributes.timer = true;
         }
 
-        const childLockEntity = deviceEntities.find(e => e.entity_id.startsWith("switch.") && e.entity_id.endsWith("_child_lock"));
+        const childLockEntity = this.getAuxEntity(deviceEntities, this.entityFilters['childLock']);
         if (childLockEntity) {
             this.child_lock_entity = childLockEntity.entity_id;
             this.supportedAttributes.childLock = true;
         }
 
         // TODO: Remember entity type
-        const numberLedEntity = deviceEntities.find(e => e.entity_id.startsWith("number.") && e.entity_id.endsWith("_led_brightness"));
+        const numberLedEntity = this.getAuxEntity(deviceEntities, this.entityFilters['ledBrightnessNumber']);
         if (numberLedEntity) {
             this.number_led_brightness_entity = numberLedEntity.entity_id;
             this.supportedAttributes.led = true;
         }
 
-        const selectLedEntity = deviceEntities.find(e => e.entity_id.startsWith("select.") && e.entity_id.endsWith("_led_brightness"));
+        const selectLedEntity = this.getAuxEntity(deviceEntities, this.entityFilters['ledBrightnessSelect']);
         if (selectLedEntity) {
             this.select_led_brightness_entity = selectLedEntity.entity_id;
             this.supportedAttributes.led = true;
@@ -142,17 +181,17 @@ class FanXiaomi extends HTMLElement {
     }
 
     checkFanSensors(deviceEntities) {
-        const tempSensorEntity = deviceEntities.find(e => e.entity_id.startsWith("sensor.") && e.entity_id.endsWith("_temperature"));
+        const tempSensorEntity = this.getAuxEntity(deviceEntities, this.entityFilters['temperature']);
         if (tempSensorEntity) {
             this.temp_sensor_entity = tempSensorEntity.entity_id;
         }
 
-        const humiditySensorEntity = deviceEntities.find(e => e.entity_id.startsWith("sensor.") && e.entity_id.endsWith("_humidity"));
+        const humiditySensorEntity = this.getAuxEntity(deviceEntities, this.entityFilters['humidity']);
         if (humiditySensorEntity) {
             this.humidity_sensor_entity = humiditySensorEntity.entity_id;
         }
 
-        const powerSupplyEntity = deviceEntities.find(e => e.entity_id.startsWith("binary_sensor.") && e.entity_id.endsWith("_power_supply"));
+        const powerSupplyEntity = this.getAuxEntity(deviceEntities, this.entityFilters['powerSupply']);
         if (powerSupplyEntity) {
             this.power_supply_entity = powerSupplyEntity.entity_id;
         }
