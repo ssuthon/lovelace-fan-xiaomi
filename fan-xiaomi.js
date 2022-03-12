@@ -191,6 +191,14 @@ class FanXiaomi extends HTMLElement {
         return hass.states[this.config.entity].attributes['percentage'];
     }
 
+    getPresetMode(hass) {
+        const attrs = hass.states[this.config.entity].attributes;
+        if (this.config.platform === 'default') {
+            return attrs['preset_mode'].toLowerCase();
+        }
+        return attrs['mode'].toLowerCase();
+    }
+
     setLed(hass, on) {
         if (this.numberLedEntity) {
             hass.callService('number', 'set_value', {
@@ -724,7 +732,7 @@ class FanXiaomi extends HTMLElement {
             delay_off_countdown: this.getTimer(hass),
             angle: this.getAngle(hass),
             speed: this.getSpeed(hass),
-            mode: this.config.platform === 'default' ? attrs['preset_mode'].toLowerCase() : attrs['mode'],
+            preset_mode: this.getPresetMode(hass),
             model: attrs['model'],
             led: this.getLed(hass),
             temperature: this.getTemperature(hass),
@@ -947,7 +955,7 @@ LED
 
     setUI(fanboxa, {title, natural_speed, speed_percentage, state,
         child_lock, oscillating, delay_off_countdown, angle,
-        speed, mode, model, led, temperature, humidity, power_supply
+        speed, preset_mode, model, led, temperature, humidity, power_supply
     }) {
         fanboxa.querySelector('.var-title').textContent = title
 
@@ -1082,12 +1090,12 @@ LED
         if (this.supportedAttributes.naturalSpeed) {
             //p* fans do not report direct_speed and natural_speed
             if (!this.supportedAttributes.naturalSpeedReporting) {
-                if (mode === 'nature') {
+                if (preset_mode === 'nature') {
                     natural_speed = true
-                } else if (mode === 'normal') {
+                } else if (preset_mode === 'normal') {
                     natural_speed = false
                 } else {
-                    this.error(`Unrecognized mode for ${model} when updating natural mode state: ${mode}`)
+                    this.error(`Unrecognized mode for ${model} when updating natural mode state: ${preset_mode}`)
                     natural_speed = false
                     this.error(`Defaulting to natural_speed = ${natural_speed}`)
                 }
