@@ -106,6 +106,13 @@ class FanXiaomi extends HTMLElement {
         return entities.find(e => e.entity_id.startsWith(entityFilter['prefix']) && e.entity_id.endsWith(entityFilter['suffix']));
     }
 
+    getModel(hass) {
+        if (this.config.platform === 'default') {
+            return null
+        }
+        return hass.states[this.config.entity].attributes['model']
+    }
+
     setChildLock(hass, on) {
         if (this.childLockEntity) {
             hass.callService('switch', on ? 'turn_on' : 'turn_off', {
@@ -337,7 +344,6 @@ class FanXiaomi extends HTMLElement {
             this.supportedAttributes.childLock = true;
         }
 
-        // TODO: Remember entity type
         const numberLedEntity = this.getAuxEntity(deviceEntities, this.entityFilters['ledNumber']);
         if (numberLedEntity) {
             this.numberLedEntity = numberLedEntity.entity_id;
@@ -731,7 +737,7 @@ class FanXiaomi extends HTMLElement {
             angle: this.getAngle(hass),
             speed: this.getSpeed(hass),
             preset_mode: this.getPresetMode(hass),
-            model: attrs['model'],
+            model: this.getModel(hass),
             led: this.getLed(hass),
             temperature: this.getTemperature(hass),
             humidity: this.getHumidity(hass),
