@@ -70,7 +70,7 @@ class FanXiaomi extends HTMLElement {
         },
         childLock: {
             prefix: 'switch.',
-            suffix: 'child_lock'
+            suffix: '_child_lock'
         },
         timer: {
             prefix: 'number.',
@@ -78,11 +78,11 @@ class FanXiaomi extends HTMLElement {
         },
         ledBrightnessNumber: {
             prefix: 'number.',
-            suffix: 'led_brightness'
+            suffix: '_led_brightness'
         },
         ledBrightnessSelect: {
             prefix: 'select.',
-            suffix: 'led_brightness'
+            suffix: '_led_brightness'
         },
         temperature: {
             prefix: 'sensor.',
@@ -199,16 +199,20 @@ class FanXiaomi extends HTMLElement {
 
     async configureAsync(hass) {
         if (this.config.platform === 'default') {
-            const attributes = hass.states[this.config.entity].attributes;
-            const allEntities = await hass.callWS({ type: "config/entity_registry/list" });
-            const fanEntity = allEntities.find(e => e.entity_id === this.config.entity)
+            const fanEntity = hass.states[this.config.entity];
             if (!fanEntity) {
-                return
+                return;
             }
-            const deviceEntities = allEntities.filter(e => e.device_id === fanEntity.device_id);
-            this.checkFanFeatures(attributes)
-            this.checkFanAuxFeatures(hass, deviceEntities)
-            this.checkFanAuxSensors(deviceEntities)
+            const attributes = fanEntity.attributes;
+            const allEntities = await hass.callWS({ type: "config/entity_registry/list" });
+            const fanApiEntity = allEntities.find(e => e.entity_id === this.config.entity);
+            if (!fanApiEntity) {
+                return;
+            }
+            const deviceEntities = allEntities.filter(e => e.device_id === fanApiEntity.device_id);
+            this.checkFanFeatures(attributes);
+            this.checkFanAuxFeatures(hass, deviceEntities);
+            this.checkFanAuxSensors(deviceEntities);
         } else {
             const state = hass.states[this.config.entity];
             const attrs = state.attributes;
@@ -603,10 +607,13 @@ class FanXiaomi extends HTMLElement {
     }
 
     updateUI(hass) {
-        const state = hass.states[this.config.entity];
-        const attrs = state.attributes;
+        const entity = hass.states[this.config.entity];
+        if (!entity) {
+            return;
+        }
+        const attrs = entity.attributes;
 
-        if (state.state === 'unavailable') {
+        if (entity.state === 'unavailable') {
             this.card.querySelector('.var-title').textContent = this.config.name + ' (Disconnected)';
             return;
         }
@@ -621,7 +628,7 @@ class FanXiaomi extends HTMLElement {
             title: this.config.name || attrs['friendly_name'],
             natural_speed: attrs['natural_speed'],
             raw_speed: this.config.platform === 'default' ? attrs['percentage'] : attrs['raw_speed'],
-            state: state.state,
+            state: entity.state,
             child_lock: this.childLockEntity ? hass.states[this.childLockEntity].state === 'on' : attrs['child_lock'],
             oscillating: attrs['oscillating'],
             delay_off_countdown: this.delayOffEntity ? hass.states[this.delayOffEntity].state : attrs['delay_off_countdown'],
