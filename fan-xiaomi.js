@@ -57,7 +57,7 @@ class FanXiaomi extends HTMLElement {
             name: "Xiaomi Fan",
         };
     }
-    
+
     supportedAttributes = {
         angle: true, childLock: true, timer: true, rotationAngle: true, speedLevels: 4, naturalSpeed: true, 
             naturalSpeedReporting: false, supportedAngles: [30, 60, 90, 120], sleepMode: false, led: false
@@ -132,6 +132,17 @@ class FanXiaomi extends HTMLElement {
                 entity_id: this.config.entity
             });
         }
+    }
+
+    getLed(hass) {
+        if (this.numberLedEntity) {
+            return hass.states[this.numberLedEntity].state > 0;
+        } else if (this.selectLedEntity) {
+            return hass.states[this.selectLedEntity].state != 'off';
+        } else if (this.switchLedEntity) {
+            return hass.states[this.switchLedEntity].state == 'on';
+        }
+        return hass.states[this.config.entity].attributes['led_brightness'] < 2;
     }
 
     set hass(hass) {
@@ -640,12 +651,6 @@ class FanXiaomi extends HTMLElement {
             return;
         }
 
-        const led = this.numberLedEntity ?
-            hass.states[this.numberLedEntity].state > 0 :
-            (this.selectLedEntity ?
-                hass.states[this.selectLedEntity].state != 'off':
-                attrs['led_brightness'] < 2);
-
         this.setUI(this.card.querySelector('.fan-xiaomi-panel'), {
             title: this.config.name || attrs['friendly_name'],
             natural_speed: attrs['natural_speed'],
@@ -658,7 +663,7 @@ class FanXiaomi extends HTMLElement {
             speed: attrs['speed'],
             mode: this.config.platform === 'default' ? attrs['preset_mode'].toLowerCase() : attrs['mode'],
             model: attrs['model'],
-            led: led,
+            led: this.getLed(hass),
             temperature: this.temperatureEntity ? hass.states[this.temperatureEntity].state : undefined,
             humidity: this.humidityEntity ? hass.states[this.humidityEntity].state : undefined,
             power_supply: this.powerSupplyEntity ? hass.states[this.powerSupplyEntity].state === 'on' : undefined,
