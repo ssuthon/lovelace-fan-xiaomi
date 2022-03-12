@@ -70,7 +70,7 @@ class FanXiaomi extends HTMLElement {
         },
         childLock: {
             prefix: 'switch.',
-            suffix: 'child_lock'
+            suffix: '_child_lock'
         },
         timer: {
             prefix: 'number.',
@@ -78,11 +78,11 @@ class FanXiaomi extends HTMLElement {
         },
         ledBrightnessNumber: {
             prefix: 'number.',
-            suffix: 'led_brightness'
+            suffix: '_led_brightness'
         },
         ledBrightnessSelect: {
             prefix: 'select.',
-            suffix: 'led_brightness'
+            suffix: '_led_brightness'
         },
         temperature: {
             prefix: 'sensor.',
