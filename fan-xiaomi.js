@@ -191,6 +191,25 @@ class FanXiaomi extends HTMLElement {
         return hass.states[this.config.entity].attributes['percentage'];
     }
 
+    setPresetMode(hass, value) {
+        if (this.config.platform === 'default') {
+            hass.callService('fan', 'set_preset_mode', {
+                entity_id: this.config.entity,
+                preset_mode: value
+            });
+        } else {
+            if (value === 'Nature') {
+                hass.callService(this.config.platform, 'fan_set_natural_mode_on', {
+                    entity_id: this.config.entity
+                });
+            } else {
+                hass.callService(this.config.platform, 'fan_set_natural_mode_off', {
+                    entity_id: this.config.entity
+                });
+            }
+        }
+    }
+
     getPresetMode(hass) {
         const attrs = hass.states[this.config.entity].attributes;
         if (this.config.platform === 'default') {
@@ -620,23 +639,8 @@ class FanXiaomi extends HTMLElement {
             this.log('Natural')
             if (ui.querySelector('.fanbox').classList.contains('active')) {
                 let u = ui.querySelector('.var-natural')
-                let isActive = u.classList.contains('active') !== false;
-                if (this.config.platform === 'default') {
-                    hass.callService('fan', 'set_preset_mode', {
-                        entity_id: entityId,
-                        preset_mode: isActive ? 'Normal' : 'Nature'
-                    })
-                } else if (!isActive) {
-                    this.log(`Set natural mode to: On`)
-                    hass.callService(this.config.platform, 'fan_set_natural_mode_on', {
-                        entity_id: entityId
-                    });
-                } else {
-                    this.log(`Set natural mode to: Off`)
-                    hass.callService(this.config.platform, 'fan_set_natural_mode_off', {
-                        entity_id: entityId
-                    });
-                }
+                let newMode = u.classList.contains('active') ? 'Normal' : 'Nature';
+                this.setPresetMode(hass, newMode)
             }
         }
 
