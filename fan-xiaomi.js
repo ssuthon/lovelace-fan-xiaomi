@@ -57,10 +57,10 @@ class FanXiaomi extends HTMLElement {
             name: "Xiaomi Fan",
         };
     }
-    
+
     supportedAttributes = {
-        angle: true, childLock: true, timer: true, rotationAngle: true, speedLevels: 4, naturalSpeed: true, 
-            naturalSpeedReporting: false, supportedAngles: [30, 60, 90, 120], sleepMode: false, led: false
+        angle: true, childLock: true, timer: true, rotationAngle: true, speedLevels: 4, 
+        naturalSpeed: true, supportedAngles: [30, 60, 90, 120], sleepMode: false, led: false
     }
 
     entityFilters = {
@@ -76,13 +76,17 @@ class FanXiaomi extends HTMLElement {
             prefix: 'number.',
             suffix: '_delay_off_countdown'
         },
-        ledBrightnessNumber: {
+        ledNumber: {
             prefix: 'number.',
             suffix: '_led_brightness'
         },
-        ledBrightnessSelect: {
+        ledSelect: {
             prefix: 'select.',
             suffix: '_led_brightness'
+        },
+        ledSwitch: {
+            prefix: 'switch.',
+            suffix: '_led'
         },
         temperature: {
             prefix: 'sensor.',
@@ -99,7 +103,183 @@ class FanXiaomi extends HTMLElement {
     }
 
     getAuxEntity(entities, entityFilter) {
-        return entities.find(e => e.entity_id.startsWith(entityFilter['prefix']) && e.entity_id.endsWith(entityFilter['suffix']))
+        return entities.find(e => e.entity_id.startsWith(entityFilter['prefix']) && e.entity_id.endsWith(entityFilter['suffix']));
+    }
+
+    getModel(hass) {
+        if (this.config.platform === 'default') {
+            return null
+        }
+        return hass.states[this.config.entity].attributes['model']
+    }
+
+    setChildLock(hass, on) {
+        if (this.childLockEntity) {
+            hass.callService('switch', on ? 'turn_on' : 'turn_off', {
+                entity_id: this.childLockEntity,
+            });
+        } else {
+            hass.callService(this.config.platform, on ? 'fan_set_child_lock_on' : 'fan_set_child_lock_off');
+        }
+    }
+
+    getChildLock(hass) {
+        if (this.childLockEntity) {
+            return hass.states[this.childLockEntity].state === 'on';
+        }
+        return hass.states[this.config.entity].attributes['child_lock'];
+    }
+
+    setTimer(hass, value) {
+        if (this.delayOffEntity) {
+            hass.callService('number', 'set_value', {
+                entity_id: this.delayOffEntity,
+                value: value
+            });
+        } else {
+            hass.callService(this.config.platform, 'fan_set_delay_off', {
+                entity_id: this.config.entity,
+                delay_off_countdown: value
+            });
+        }
+    }
+
+    getTimer(hass) {
+        if (this.delayOffEntity) {
+            return hass.states[this.delayOffEntity].state;
+        }
+        return hass.states[this.config.entity].attributes['delay_off_countdown'];
+    }
+
+    setAngle(hass, value) {
+        if (this.oscillationAngleEntity) {
+            hass.callService('number', 'set_value', {
+                entity_id: this.oscillationAngleEntity,
+                value: value
+            });
+        } else {
+            hass.callService(this.config.platform, 'fan_set_oscillation_angle', {
+                entity_id: this.config.entity,
+                angle: value
+            });
+        }
+    }
+
+    getAngle(hass) {
+        if (this.oscillationAngleEntity) {
+            return Number(hass.states[this.oscillationAngleEntity].state);
+        }
+        return hass.states[this.config.entity].attributes['angle'];
+    }
+
+    setOscillation(hass, on) {
+        hass.callService('fan', 'oscillate', {
+            entity_id: this.config.entity,
+            oscillating: on
+        });
+    }
+
+    getOscillation(hass) {
+        return hass.states[this.config.entity].attributes['oscillating'];
+    }
+
+    setSpeed(hass, value) {
+        hass.callService('fan', 'set_speed', {
+            entity_id: this.config.entity,
+            speed: value
+        });
+    }
+
+    getSpeed(hass) {
+        return hass.states[this.config.entity].attributes['speed'];
+    }
+    
+    getSpeedPercentage(hass) {
+        return hass.states[this.config.entity].attributes['percentage'];
+    }
+
+    setPresetMode(hass, value) {
+        if (this.config.platform === 'default') {
+            hass.callService('fan', 'set_preset_mode', {
+                entity_id: this.config.entity,
+                preset_mode: value
+            });
+        } else {
+            if (value === 'Nature') {
+                hass.callService(this.config.platform, 'fan_set_natural_mode_on', {
+                    entity_id: this.config.entity
+                });
+            } else {
+                hass.callService(this.config.platform, 'fan_set_natural_mode_off', {
+                    entity_id: this.config.entity
+                });
+            }
+        }
+    }
+
+    getPresetMode(hass) {
+        const attrs = hass.states[this.config.entity].attributes;
+        if (this.config.platform === 'default') {
+            return attrs['preset_mode'];
+        }
+        return attrs['mode'];
+    }
+
+    setLed(hass, on) {
+        if (this.numberLedEntity) {
+            hass.callService('number', 'set_value', {
+                entity_id: this.numberLedEntity,
+                value: on ? 100 : 0
+            });
+        } else if (this.selectLedEntity) {
+            hass.callService('select', 'select_option', {
+                entity_id: this.selectLedEntity,
+                option: on ? 'bright' : 'off'
+            });
+        } else if (this.switchLedEntity) {
+            if (on) {
+                hass.callService('switch', 'turn_on', {
+                    entity_id: this.switchLedEntity,
+                });
+            } else {
+                hass.callService('switch', 'turn_off', {
+                    entity_id: this.switchLedEntity,
+                });
+            }
+        } else {
+            hass.callService(this.config.platform, on ? 'fan_set_led_on' : 'fan_set_led_off', {
+                entity_id: this.config.entity
+            });
+        }
+    }
+
+    getLed(hass) {
+        if (this.numberLedEntity) {
+            return hass.states[this.numberLedEntity].state > 0;
+        } else if (this.selectLedEntity) {
+            return hass.states[this.selectLedEntity].state !== 'off';
+        } else if (this.switchLedEntity) {
+            return hass.states[this.switchLedEntity].state === 'on';
+        }
+        return hass.states[this.config.entity].attributes['led_brightness'] < 2;
+    }
+
+    getTemperature(hass) {
+        if (this.temperatureEntity) {
+            return hass.states[this.temperatureEntity].state;
+        }
+    }
+
+    getHumidity(hass) {
+        if (this.humidityEntity) {
+            return hass.states[this.humidityEntity].state;
+        }
+    }
+
+    getPowerSupply(hass) {
+        if (this.powerSupplyEntity) {
+            return hass.states[this.powerSupplyEntity].state === 'on';
+        }
     }
 
     set hass(hass) {
@@ -164,20 +344,23 @@ class FanXiaomi extends HTMLElement {
             this.supportedAttributes.childLock = true;
         }
 
-        // TODO: Remember entity type
-        const numberLedEntity = this.getAuxEntity(deviceEntities, this.entityFilters['ledBrightnessNumber']);
+        const numberLedEntity = this.getAuxEntity(deviceEntities, this.entityFilters['ledNumber']);
         if (numberLedEntity) {
-            this.numberLedBrightnessEntity = numberLedEntity.entity_id;
+            this.numberLedEntity = numberLedEntity.entity_id;
             this.supportedAttributes.led = true;
         }
 
-        const selectLedEntity = this.getAuxEntity(deviceEntities, this.entityFilters['ledBrightnessSelect']);
+        const selectLedEntity = this.getAuxEntity(deviceEntities, this.entityFilters['ledSelect']);
         if (selectLedEntity) {
-            this.selectLedBrightnessEntity = selectLedEntity.entity_id;
+            this.selectLedEntity = selectLedEntity.entity_id;
             this.supportedAttributes.led = true;
         }
 
-        // TODO Add switch type
+        const switchLedEntity = this.getAuxEntity(deviceEntities, this.entityFilters['ledSwitch']);
+        if (switchLedEntity) {
+            this.switchLedEntity = switchLedEntity.entity_id;
+            this.supportedAttributes.led = true;
+        }
     }
 
     checkFanAuxSensors(deviceEntities) {
@@ -223,10 +406,8 @@ class FanXiaomi extends HTMLElement {
                 this.supportedAttributes.rotationAngle = false;
                 this.supportedAttributes.speedLevels = 3;
                 this.supportedAttributes.naturalSpeed = true;
-                this.supportedAttributes.naturalSpeedReporting = false;
             }
             if (['dmaker.fan.p15', 'dmaker.fan.p11', 'dmaker.fan.p10', 'dmaker.fan.p5'].includes(attrs['model'])){
-                this.supportedAttributes.naturalSpeedReporting = false;
                 this.supportedAttributes.supportedAngles = [30, 60, 90, 120, 140];
                 //this.supportedAttributes.led = true;
             }
@@ -239,11 +420,9 @@ class FanXiaomi extends HTMLElement {
                 this.supportedAttributes.rotationAngle = false;
                 this.supportedAttributes.speedLevels = 3;
                 this.supportedAttributes.naturalSpeed = false;
-                this.supportedAttributes.naturalSpeedReporting = false;
                 this.supportedAttributes.timer = false;
             }
             if (['dmaker.fan.p9'].includes(attrs['model'])){
-                this.supportedAttributes.naturalSpeedReporting = false;
                 this.supportedAttributes.supportedAngles = [30, 60, 90, 120, 150];
             }
             if (['leshow.fan.ss4'].includes(attrs['model'])){
@@ -251,7 +430,6 @@ class FanXiaomi extends HTMLElement {
                 this.supportedAttributes.childLock = false;
                 this.supportedAttributes.rotationAngle = false;
                 this.supportedAttributes.naturalSpeed = false;
-                this.supportedAttributes.naturalSpeedReporting = false;
                 this.supportedAttributes.sleepMode = true;
             }
             if (['zhimi.fan.za5'].includes(attrs['model'])){
@@ -350,10 +528,7 @@ class FanXiaomi extends HTMLElement {
                 
 
                 this.log(`Set speed to: ${newSpeed}`)
-                hass.callService('fan', 'set_speed', {
-                    entity_id: entityId,
-                    speed: newSpeed
-                });
+                this.setSpeed(hass, newSpeed);
             }
         }
 
@@ -375,91 +550,71 @@ class FanXiaomi extends HTMLElement {
         ui.querySelector('.button-angle').onclick = () => {
             this.log('Oscillation Angle')
             if (ui.querySelector('.fanbox').classList.contains('active')) {
-                let b = ui.querySelector('.button-angle')
+                let b = ui.querySelector('.button-angle');
                 if (!b.classList.contains('loading')) {
-                    let u = ui.querySelector('.var-angle')
-                    let oldAngleText = u.innerHTML
-                    let newAngle
-                    let curAngleIndex = this.supportedAttributes.supportedAngles.indexOf(parseInt(oldAngleText,10))
+                    let u = ui.querySelector('.var-angle');
+                    let oldAngleText = u.innerHTML;
+                    let newAngle;
+                    let curAngleIndex = this.supportedAttributes.supportedAngles.indexOf(parseInt(oldAngleText,10));
                     if (curAngleIndex >= 0 && curAngleIndex < this.supportedAttributes.supportedAngles.length-1) {
-                        newAngle = this.supportedAttributes.supportedAngles[curAngleIndex+1]
+                        newAngle = this.supportedAttributes.supportedAngles[curAngleIndex+1];
                     } else {
-                        newAngle = this.supportedAttributes.supportedAngles[0]
+                        newAngle = this.supportedAttributes.supportedAngles[0];
                     }
-                    b.classList.add('loading')
+                    b.classList.add('loading');
 
-                    this.log(`Set angle to: ${newAngle}`)
-                    if (this.oscillationAngleEntity) {
-                        hass.callService('number', 'set_value', {
-                            entity_id: this.oscillationAngleEntity,
-                            value: newAngle
-                        })
-                    } else {
-                        hass.callService(this.config.platform, 'fan_set_oscillation_angle', {
-                            entity_id: entityId,
-                            angle: newAngle
-                        });
-                    }
+                    this.log(`Set angle to: ${newAngle}`);
+                    this.setAngle(hass, newAngle);
                 }
             }
         }
 
         // Timer toggle event bindings
         ui.querySelector('.button-timer').onclick = () => {
-            this.log('Timer')
+            this.log('Timer');
             if (ui.querySelector('.fanbox').classList.contains('active')) {
                 let b = ui.querySelector('.button-timer')
                 if (!b.classList.contains('loading')) {
-                    let u = ui.querySelector('.var-timer')
+                    let u = ui.querySelector('.var-timer');
 
-                    let currTimer
-                    let hoursRegex = /(\d)h/g
-                    let minsRegex = /(\d{1,2})m/g
-                    let hoursMatch = hoursRegex.exec(u.textContent)
-                    let minsMatch = minsRegex.exec(u.textContent)
-                    let currHours = parseInt(hoursMatch ? hoursMatch[1] : '0')
-                    let currMins = parseInt(minsMatch ? minsMatch[1] : '0')
-                    currTimer = currHours * 60 + currMins
+                    let currTimer;
+                    let hoursRegex = /(\d)h/g;
+                    let minsRegex = /(\d{1,2})m/g;
+                    let hoursMatch = hoursRegex.exec(u.textContent);
+                    let minsMatch = minsRegex.exec(u.textContent);
+                    let currHours = parseInt(hoursMatch ? hoursMatch[1] : '0');
+                    let currMins = parseInt(minsMatch ? minsMatch[1] : '0');
+                    currTimer = currHours * 60 + currMins;
 
-                    let newTimer
+                    let newTimer;
                     if (currTimer < 59) {
-                        newTimer = 60
+                        newTimer = 60;
                     } else if (currTimer < 119) {
-                        newTimer = 120
+                        newTimer = 120;
                     } else if (currTimer < 179) {
-                        newTimer = 180
+                        newTimer = 180;
                     } else if (currTimer < 239) {
-                        newTimer = 240
+                        newTimer = 240;
                     } else if (currTimer < 299) {
-                        newTimer = 300
+                        newTimer = 300;
                     } else if (currTimer < 359) {
-                        newTimer = 360
+                        newTimer = 360;
                     } else if (currTimer < 419) {
-                        newTimer = 420
+                        newTimer = 420;
                     } else if (currTimer < 479) {
-                        newTimer = 480
+                        newTimer = 480;
                     } else if (currTimer = 480) {
-                        newTimer = 0
+                        newTimer = 0;
                     } else {
-                        this.error(`Error setting timer. u.textContent = ${u.textContent}; currTimer = ${currTimer}`)
-                        newTimer = 60
-                        this.error(`Defaulting to ${newTimer}`)
+                        this.error(`Error setting timer. u.textContent = ${u.textContent}; currTimer = ${currTimer}`);
+                        newTimer = 60;
+                        this.error(`Defaulting to ${newTimer}`);
                     }
 
-                    b.classList.add('loading')
+                    b.classList.add('loading');
 
-                    this.log(`Set timer to: ${newTimer}`)
-                    if (this.delayOffEntity) {
-                        hass.callService('number', 'set_value', {
-                            entity_id: this.delayOffEntity,
-                            value: newTimer
-                        })
-                    } else {
-                    hass.callService(this.config.platform, 'fan_set_delay_off', {
-                        entity_id: entityId,
-                        delay_off_countdown: newTimer
-                    });
-                    }
+                    this.log(`Set timer to: ${newTimer}`);
+                    this.setTimer(hass, newTimer);
                 }
             }
         }
@@ -479,14 +634,8 @@ class FanXiaomi extends HTMLElement {
                     }
                     this.log(`Set child lock to: ${setChildLockOn ? 'On' : 'Off'}`);
 
-                    if (this.childLockEntity) {
-                        hass.callService('switch', setChildLockOn ? 'turn_on' : 'turn_off', {
-                            entity_id: this.childLockEntity,
-                        })
-                    } else {
-                        hass.callService(this.config.platform, setChildLockOn ? 'fan_set_child_lock_on' : 'fan_set_child_lock_off');
-                    }
-                    b.classList.add('loading')
+                    this.setChildLock(hass, setChildLockOn);
+                    b.classList.add('loading');
                 }
             }
         }
@@ -496,23 +645,8 @@ class FanXiaomi extends HTMLElement {
             this.log('Natural')
             if (ui.querySelector('.fanbox').classList.contains('active')) {
                 let u = ui.querySelector('.var-natural')
-                let isActive = u.classList.contains('active') !== false;
-                if (this.config.platform === 'default') {
-                    hass.callService('fan', 'set_preset_mode', {
-                        entity_id: entityId,
-                        preset_mode: isActive ? 'Normal' : 'Nature'
-                    })
-                } else if (!isActive) {
-                    this.log(`Set natural mode to: On`)
-                    hass.callService(this.config.platform, 'fan_set_natural_mode_on', {
-                        entity_id: entityId
-                    });
-                } else {
-                    this.log(`Set natural mode to: Off`)
-                    hass.callService(this.config.platform, 'fan_set_natural_mode_off', {
-                        entity_id: entityId
-                    });
-                }
+                let newMode = u.classList.contains('active') ? 'Normal' : 'Nature';
+                this.setPresetMode(hass, newMode)
             }
         }
 
@@ -543,21 +677,7 @@ class FanXiaomi extends HTMLElement {
                 let u = ui.querySelector('.var-led')
                 const setLedOn = !u.classList.contains('active');
                 this.log(`Set led mode to: ${setLedOn ? 'On' : 'Off'}`);
-                if (this.numberLedBrightnessEntity) {
-                    hass.callService('number', 'set_value', {
-                        entity_id: this.numberLedBrightnessEntity,
-                        value: setLedOn ? 100 : 0
-                    });
-                } else if (this.selectLedBrightnessEntity) {
-                    hass.callService('select', 'select_option', {
-                        entity_id: this.selectLedBrightnessEntity,
-                        option: setLedOn ? 'bright' : 'off'
-                    });
-                } else {
-                    hass.callService(this.config.platform, setLedOn ? 'fan_set_led_on' : 'fan_set_led_off', {
-                        entity_id: entityId
-                    });
-                }
+                this.setLed(hass, setLedOn);
             }
         }
 
@@ -566,19 +686,8 @@ class FanXiaomi extends HTMLElement {
             this.log('Oscillate')
             if (ui.querySelector('.fanbox').classList.contains('active')) {
                 let u = ui.querySelector('.var-oscillating')
-                if (u.classList.contains('active') === false) {
-                    this.log(`Set oscillation to: On`)
-                    hass.callService('fan', 'oscillate', {
-                        entity_id: entityId,
-                        oscillating: true
-                    });
-                } else {
-                    this.log(`Set oscillation to: Off`)
-                    hass.callService('fan', 'oscillate', {
-                        entity_id: entityId,
-                        oscillating: false
-                    });
-                }
+                const setOscillationOn = u.classList.contains('active') ? false : true;
+                this.setOscillation(hass, setOscillationOn);
             }
         }
         
@@ -618,28 +727,21 @@ class FanXiaomi extends HTMLElement {
             return;
         }
 
-        const led = this.numberLedBrightnessEntity ?
-            hass.states[this.numberLedBrightnessEntity].state > 0 :
-            (this.selectLedBrightnessEntity ?
-                hass.states[this.selectLedBrightnessEntity].state != 'off':
-                attrs['led_brightness'] < 2);
-
         this.setUI(this.card.querySelector('.fan-xiaomi-panel'), {
             title: this.config.name || attrs['friendly_name'],
-            natural_speed: attrs['natural_speed'],
-            raw_speed: this.config.platform === 'default' ? attrs['percentage'] : attrs['raw_speed'],
+            speed_percentage: this.getSpeedPercentage(hass),
             state: entity.state,
-            child_lock: this.childLockEntity ? hass.states[this.childLockEntity].state === 'on' : attrs['child_lock'],
-            oscillating: attrs['oscillating'],
-            delay_off_countdown: this.delayOffEntity ? hass.states[this.delayOffEntity].state : attrs['delay_off_countdown'],
-            angle: this.oscillationAngleEntity ? Number(hass.states[this.oscillationAngleEntity].state) : attrs['angle'],
-            speed: attrs['speed'],
-            mode: this.config.platform === 'default' ? attrs['preset_mode'].toLowerCase() : attrs['mode'],
-            model: attrs['model'],
-            led: led,
-            temperature: this.temperatureEntity ? hass.states[this.temperatureEntity].state : undefined,
-            humidity: this.humidityEntity ? hass.states[this.humidityEntity].state : undefined,
-            power_supply: this.powerSupplyEntity ? hass.states[this.powerSupplyEntity].state === 'on' : undefined,
+            child_lock: this.getChildLock(hass),
+            oscillating: this.getOscillation(hass),
+            delay_off_countdown: this.getTimer(hass),
+            angle: this.getAngle(hass),
+            speed: this.getSpeed(hass),
+            preset_mode: this.getPresetMode(hass),
+            model: this.getModel(hass),
+            led: this.getLed(hass),
+            temperature: this.getTemperature(hass),
+            humidity: this.getHumidity(hass),
+            power_supply: this.getPowerSupply(hass)
         });
     }
 
@@ -855,9 +957,9 @@ LED
 
     // Define UI Parameters
 
-    setUI(fanboxa, {title, natural_speed, raw_speed, state,
-        child_lock, oscillating, delay_off_countdown, angle,
-        speed, mode, model, led, temperature, humidity, power_supply
+    setUI(fanboxa, {title, speed_percentage, state, child_lock, oscillating, 
+        delay_off_countdown, angle, speed, preset_mode, model, led, 
+        temperature, humidity, power_supply
     }) {
         fanboxa.querySelector('.var-title').textContent = title
 
@@ -967,13 +1069,12 @@ LED
             activeElement.classList.remove('active')
         }
 
-        //let raw_speed_int = Number(raw_speed)
         let speedRegexpMatch
         let speedLevel
-        let raw_speed_int = Number(raw_speed)
+        let speed_percentage_int = Number(speed_percentage)
         if (this.config.use_standard_speeds || this.config.platform === 'default') {
             let speedCount = this.supportedAttributes.speedList.length
-            speedLevel = Math.round(raw_speed_int/100*speedCount)
+            speedLevel = Math.round(speed_percentage_int / 100 * speedCount)
         } else {
             let speedRegexp = /Level (\d)/g
             speedRegexpMatch = speedRegexp.exec(speed)
@@ -991,19 +1092,7 @@ LED
         // Natural mode
         activeElement = fanboxa.querySelector('.var-natural')
         if (this.supportedAttributes.naturalSpeed) {
-            //p* fans do not report direct_speed and natural_speed
-            if (!this.supportedAttributes.naturalSpeedReporting) {
-                if (mode === 'nature') {
-                    natural_speed = true
-                } else if (mode === 'normal') {
-                    natural_speed = false
-                } else {
-                    this.error(`Unrecognized mode for ${model} when updating natural mode state: ${mode}`)
-                    natural_speed = false
-                    this.error(`Defaulting to natural_speed = ${natural_speed}`)
-                }
-            }
-            if (natural_speed) {
+            if (preset_mode === 'Nature') {
                 if (activeElement.classList.contains('active') === false) {
                     activeElement.classList.add('active')
                 }
@@ -1017,7 +1106,7 @@ LED
         // Sleep mode
         activeElement = fanboxa.querySelector('.var-sleep')
         if (this.supportedAttributes.sleepMode) {
-            if (raw_speed_int == 1) {
+            if (speed_percentage_int == 1) {
                 if (activeElement.classList.contains('active') === false) {
                     activeElement.classList.add('active')
                 }
