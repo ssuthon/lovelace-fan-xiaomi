@@ -186,6 +186,10 @@ class FanXiaomi extends HTMLElement {
     getSpeed(hass) {
         return hass.states[this.config.entity].attributes['speed'];
     }
+    
+    getSpeedPercentage(hass) {
+        return hass.states[this.config.entity].attributes['percentage'];
+    }
 
     setLed(hass, on) {
         if (this.numberLedEntity) {
@@ -713,7 +717,7 @@ class FanXiaomi extends HTMLElement {
         this.setUI(this.card.querySelector('.fan-xiaomi-panel'), {
             title: this.config.name || attrs['friendly_name'],
             natural_speed: attrs['natural_speed'],
-            raw_speed: this.config.platform === 'default' ? attrs['percentage'] : attrs['raw_speed'],
+            speed_percentage: this.getSpeedPercentage(hass),
             state: entity.state,
             child_lock: this.getChildLock(hass),
             oscillating: this.getOscillation(hass),
@@ -941,7 +945,7 @@ LED
 
     // Define UI Parameters
 
-    setUI(fanboxa, {title, natural_speed, raw_speed, state,
+    setUI(fanboxa, {title, natural_speed, speed_percentage, state,
         child_lock, oscillating, delay_off_countdown, angle,
         speed, mode, model, led, temperature, humidity, power_supply
     }) {
@@ -1053,13 +1057,12 @@ LED
             activeElement.classList.remove('active')
         }
 
-        //let raw_speed_int = Number(raw_speed)
         let speedRegexpMatch
         let speedLevel
-        let raw_speed_int = Number(raw_speed)
+        let speed_percentage_int = Number(speed_percentage)
         if (this.config.use_standard_speeds || this.config.platform === 'default') {
             let speedCount = this.supportedAttributes.speedList.length
-            speedLevel = Math.round(raw_speed_int/100*speedCount)
+            speedLevel = Math.round(speed_percentage_int / 100 * speedCount)
         } else {
             let speedRegexp = /Level (\d)/g
             speedRegexpMatch = speedRegexp.exec(speed)
@@ -1103,7 +1106,7 @@ LED
         // Sleep mode
         activeElement = fanboxa.querySelector('.var-sleep')
         if (this.supportedAttributes.sleepMode) {
-            if (raw_speed_int == 1) {
+            if (speed_percentage_int == 1) {
                 if (activeElement.classList.contains('active') === false) {
                     activeElement.classList.add('active')
                 }
