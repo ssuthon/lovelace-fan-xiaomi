@@ -103,7 +103,88 @@ class FanXiaomi extends HTMLElement {
     }
 
     getAuxEntity(entities, entityFilter) {
-        return entities.find(e => e.entity_id.startsWith(entityFilter['prefix']) && e.entity_id.endsWith(entityFilter['suffix']))
+        return entities.find(e => e.entity_id.startsWith(entityFilter['prefix']) && e.entity_id.endsWith(entityFilter['suffix']));
+    }
+
+    setChildLock(hass, on) {
+        if (this.childLockEntity) {
+            hass.callService('switch', on ? 'turn_on' : 'turn_off', {
+                entity_id: this.childLockEntity,
+            });
+        } else {
+            hass.callService(this.config.platform, on ? 'fan_set_child_lock_on' : 'fan_set_child_lock_off');
+        }
+    }
+
+    getChildLock(hass) {
+        if (this.childLockEntity) {
+            return hass.states[this.childLockEntity].state === 'on';
+        }
+        return hass.states[this.config.entity].attributes['child_lock'];
+    }
+
+    setTimer(hass, value) {
+        if (this.delayOffEntity) {
+            hass.callService('number', 'set_value', {
+                entity_id: this.delayOffEntity,
+                value: value
+            });
+        } else {
+            hass.callService(this.config.platform, 'fan_set_delay_off', {
+                entity_id: this.config.entity,
+                delay_off_countdown: value
+            });
+        }
+    }
+
+    getTimer(hass) {
+        if (this.delayOffEntity) {
+            return hass.states[this.delayOffEntity].state;
+        }
+        return hass.states[this.config.entity].attributes['delay_off_countdown'];
+    }
+
+    setAngle(hass, value) {
+        if (this.oscillationAngleEntity) {
+            hass.callService('number', 'set_value', {
+                entity_id: this.oscillationAngleEntity,
+                value: value
+            });
+        } else {
+            hass.callService(this.config.platform, 'fan_set_oscillation_angle', {
+                entity_id: this.config.entity,
+                angle: value
+            });
+        }
+    }
+
+    getAngle(hass) {
+        if (this.oscillationAngleEntity) {
+            return Number(hass.states[this.oscillationAngleEntity].state);
+        }
+        return hass.states[this.config.entity].attributes['angle'];
+    }
+
+    setOscillation(hass, on) {
+        hass.callService('fan', 'oscillate', {
+            entity_id: this.config.entity,
+            oscillating: on
+        });
+    }
+
+    getOscillation(hass) {
+        return hass.states[this.config.entity].attributes['oscillating'];
+    }
+
+    setSpeed(hass, value) {
+        hass.callService('fan', 'set_speed', {
+            entity_id: this.config.entity,
+            speed: value
+        });
+    }
+
+    getSpeed(hass) {
+        return hass.states[this.config.entity].attributes['speed'];
     }
 
     setLed(hass, on) {
@@ -138,11 +219,29 @@ class FanXiaomi extends HTMLElement {
         if (this.numberLedEntity) {
             return hass.states[this.numberLedEntity].state > 0;
         } else if (this.selectLedEntity) {
-            return hass.states[this.selectLedEntity].state != 'off';
+            return hass.states[this.selectLedEntity].state !== 'off';
         } else if (this.switchLedEntity) {
-            return hass.states[this.switchLedEntity].state == 'on';
+            return hass.states[this.switchLedEntity].state === 'on';
         }
         return hass.states[this.config.entity].attributes['led_brightness'] < 2;
+    }
+
+    getTemperature(hass) {
+        if (this.temperatureEntity) {
+            return hass.states[this.temperatureEntity].state;
+        }
+    }
+
+    getHumidity(hass) {
+        if (this.humidityEntity) {
+            return hass.states[this.humidityEntity].state;
+        }
+    }
+
+    getPowerSupply(hass) {
+        if (this.powerSupplyEntity) {
+            return hass.states[this.powerSupplyEntity].state === 'on';
+        }
     }
 
     set hass(hass) {
@@ -397,10 +496,7 @@ class FanXiaomi extends HTMLElement {
                 
 
                 this.log(`Set speed to: ${newSpeed}`)
-                hass.callService('fan', 'set_speed', {
-                    entity_id: entityId,
-                    speed: newSpeed
-                });
+                this.setSpeed(hass, newSpeed);
             }
         }
 
@@ -422,91 +518,71 @@ class FanXiaomi extends HTMLElement {
         ui.querySelector('.button-angle').onclick = () => {
             this.log('Oscillation Angle')
             if (ui.querySelector('.fanbox').classList.contains('active')) {
-                let b = ui.querySelector('.button-angle')
+                let b = ui.querySelector('.button-angle');
                 if (!b.classList.contains('loading')) {
-                    let u = ui.querySelector('.var-angle')
-                    let oldAngleText = u.innerHTML
-                    let newAngle
-                    let curAngleIndex = this.supportedAttributes.supportedAngles.indexOf(parseInt(oldAngleText,10))
+                    let u = ui.querySelector('.var-angle');
+                    let oldAngleText = u.innerHTML;
+                    let newAngle;
+                    let curAngleIndex = this.supportedAttributes.supportedAngles.indexOf(parseInt(oldAngleText,10));
                     if (curAngleIndex >= 0 && curAngleIndex < this.supportedAttributes.supportedAngles.length-1) {
-                        newAngle = this.supportedAttributes.supportedAngles[curAngleIndex+1]
+                        newAngle = this.supportedAttributes.supportedAngles[curAngleIndex+1];
                     } else {
-                        newAngle = this.supportedAttributes.supportedAngles[0]
+                        newAngle = this.supportedAttributes.supportedAngles[0];
                     }
-                    b.classList.add('loading')
+                    b.classList.add('loading');
 
-                    this.log(`Set angle to: ${newAngle}`)
-                    if (this.oscillationAngleEntity) {
-                        hass.callService('number', 'set_value', {
-                            entity_id: this.oscillationAngleEntity,
-                            value: newAngle
-                        })
-                    } else {
-                        hass.callService(this.config.platform, 'fan_set_oscillation_angle', {
-                            entity_id: entityId,
-                            angle: newAngle
-                        });
-                    }
+                    this.log(`Set angle to: ${newAngle}`);
+                    this.setAngle(hass, newAngle);
                 }
             }
         }
 
         // Timer toggle event bindings
         ui.querySelector('.button-timer').onclick = () => {
-            this.log('Timer')
+            this.log('Timer');
             if (ui.querySelector('.fanbox').classList.contains('active')) {
                 let b = ui.querySelector('.button-timer')
                 if (!b.classList.contains('loading')) {
-                    let u = ui.querySelector('.var-timer')
+                    let u = ui.querySelector('.var-timer');
 
-                    let currTimer
-                    let hoursRegex = /(\d)h/g
-                    let minsRegex = /(\d{1,2})m/g
-                    let hoursMatch = hoursRegex.exec(u.textContent)
-                    let minsMatch = minsRegex.exec(u.textContent)
-                    let currHours = parseInt(hoursMatch ? hoursMatch[1] : '0')
-                    let currMins = parseInt(minsMatch ? minsMatch[1] : '0')
-                    currTimer = currHours * 60 + currMins
+                    let currTimer;
+                    let hoursRegex = /(\d)h/g;
+                    let minsRegex = /(\d{1,2})m/g;
+                    let hoursMatch = hoursRegex.exec(u.textContent);
+                    let minsMatch = minsRegex.exec(u.textContent);
+                    let currHours = parseInt(hoursMatch ? hoursMatch[1] : '0');
+                    let currMins = parseInt(minsMatch ? minsMatch[1] : '0');
+                    currTimer = currHours * 60 + currMins;
 
-                    let newTimer
+                    let newTimer;
                     if (currTimer < 59) {
-                        newTimer = 60
+                        newTimer = 60;
                     } else if (currTimer < 119) {
-                        newTimer = 120
+                        newTimer = 120;
                     } else if (currTimer < 179) {
-                        newTimer = 180
+                        newTimer = 180;
                     } else if (currTimer < 239) {
-                        newTimer = 240
+                        newTimer = 240;
                     } else if (currTimer < 299) {
-                        newTimer = 300
+                        newTimer = 300;
                     } else if (currTimer < 359) {
-                        newTimer = 360
+                        newTimer = 360;
                     } else if (currTimer < 419) {
-                        newTimer = 420
+                        newTimer = 420;
                     } else if (currTimer < 479) {
-                        newTimer = 480
+                        newTimer = 480;
                     } else if (currTimer = 480) {
-                        newTimer = 0
+                        newTimer = 0;
                     } else {
-                        this.error(`Error setting timer. u.textContent = ${u.textContent}; currTimer = ${currTimer}`)
-                        newTimer = 60
-                        this.error(`Defaulting to ${newTimer}`)
+                        this.error(`Error setting timer. u.textContent = ${u.textContent}; currTimer = ${currTimer}`);
+                        newTimer = 60;
+                        this.error(`Defaulting to ${newTimer}`);
                     }
 
-                    b.classList.add('loading')
+                    b.classList.add('loading');
 
-                    this.log(`Set timer to: ${newTimer}`)
-                    if (this.delayOffEntity) {
-                        hass.callService('number', 'set_value', {
-                            entity_id: this.delayOffEntity,
-                            value: newTimer
-                        })
-                    } else {
-                    hass.callService(this.config.platform, 'fan_set_delay_off', {
-                        entity_id: entityId,
-                        delay_off_countdown: newTimer
-                    });
-                    }
+                    this.log(`Set timer to: ${newTimer}`);
+                    this.setTimer(hass, newTimer);
                 }
             }
         }
@@ -526,14 +602,8 @@ class FanXiaomi extends HTMLElement {
                     }
                     this.log(`Set child lock to: ${setChildLockOn ? 'On' : 'Off'}`);
 
-                    if (this.childLockEntity) {
-                        hass.callService('switch', setChildLockOn ? 'turn_on' : 'turn_off', {
-                            entity_id: this.childLockEntity,
-                        })
-                    } else {
-                        hass.callService(this.config.platform, setChildLockOn ? 'fan_set_child_lock_on' : 'fan_set_child_lock_off');
-                    }
-                    b.classList.add('loading')
+                    this.setChildLock(hass, setChildLockOn);
+                    b.classList.add('loading');
                 }
             }
         }
@@ -590,7 +660,7 @@ class FanXiaomi extends HTMLElement {
                 let u = ui.querySelector('.var-led')
                 const setLedOn = !u.classList.contains('active');
                 this.log(`Set led mode to: ${setLedOn ? 'On' : 'Off'}`);
-                this.setLed(hass, setLedOn)
+                this.setLed(hass, setLedOn);
             }
         }
 
@@ -599,19 +669,8 @@ class FanXiaomi extends HTMLElement {
             this.log('Oscillate')
             if (ui.querySelector('.fanbox').classList.contains('active')) {
                 let u = ui.querySelector('.var-oscillating')
-                if (u.classList.contains('active') === false) {
-                    this.log(`Set oscillation to: On`)
-                    hass.callService('fan', 'oscillate', {
-                        entity_id: entityId,
-                        oscillating: true
-                    });
-                } else {
-                    this.log(`Set oscillation to: Off`)
-                    hass.callService('fan', 'oscillate', {
-                        entity_id: entityId,
-                        oscillating: false
-                    });
-                }
+                const setOscillationOn = u.classList.contains('active') ? false : true;
+                this.setOscillation(hass, setOscillationOn);
             }
         }
         
@@ -656,17 +715,17 @@ class FanXiaomi extends HTMLElement {
             natural_speed: attrs['natural_speed'],
             raw_speed: this.config.platform === 'default' ? attrs['percentage'] : attrs['raw_speed'],
             state: entity.state,
-            child_lock: this.childLockEntity ? hass.states[this.childLockEntity].state === 'on' : attrs['child_lock'],
-            oscillating: attrs['oscillating'],
-            delay_off_countdown: this.delayOffEntity ? hass.states[this.delayOffEntity].state : attrs['delay_off_countdown'],
-            angle: this.oscillationAngleEntity ? Number(hass.states[this.oscillationAngleEntity].state) : attrs['angle'],
-            speed: attrs['speed'],
+            child_lock: this.getChildLock(hass),
+            oscillating: this.getOscillation(hass),
+            delay_off_countdown: this.getTimer(hass),
+            angle: this.getAngle(hass),
+            speed: this.getSpeed(hass),
             mode: this.config.platform === 'default' ? attrs['preset_mode'].toLowerCase() : attrs['mode'],
             model: attrs['model'],
             led: this.getLed(hass),
-            temperature: this.temperatureEntity ? hass.states[this.temperatureEntity].state : undefined,
-            humidity: this.humidityEntity ? hass.states[this.humidityEntity].state : undefined,
-            power_supply: this.powerSupplyEntity ? hass.states[this.powerSupplyEntity].state === 'on' : undefined,
+            temperature: this.getTemperature(hass),
+            humidity: this.getHumidity(hass),
+            power_supply: this.getPowerSupply(hass)
         });
     }
 
