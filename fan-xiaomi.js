@@ -106,29 +106,29 @@ class FanXiaomi extends HTMLElement {
         return entities.find(e => e.entity_id.startsWith(entityFilter['prefix']) && e.entity_id.endsWith(entityFilter['suffix']))
     }
 
-    setLed(on) {
+    setLed(hass, on) {
         if (this.numberLedEntity) {
-            this.hass.callService('number', 'set_value', {
+            hass.callService('number', 'set_value', {
                 entity_id: this.numberLedEntity,
                 value: on ? 100 : 0
             });
         } else if (this.selectLedEntity) {
-            this.hass.callService('select', 'select_option', {
+            hass.callService('select', 'select_option', {
                 entity_id: this.selectLedEntity,
                 option: on ? 'bright' : 'off'
             });
         } else if (this.switchLedEntity) {
             if (on) {
-                this.hass.callService('switch', 'turn_on', {
+                hass.callService('switch', 'turn_on', {
                     entity_id: this.switchLedEntity,
                 });
             } else {
-                this.hass.callService('switch', 'turn_off', {
+                hass.callService('switch', 'turn_off', {
                     entity_id: this.switchLedEntity,
                 });
             }
         } else {
-            this.hass.callService(this.config.platform, on ? 'fan_set_led_on' : 'fan_set_led_off', {
+            hass.callService(this.config.platform, on ? 'fan_set_led_on' : 'fan_set_led_off', {
                 entity_id: this.config.entity
             });
         }
@@ -579,7 +579,7 @@ class FanXiaomi extends HTMLElement {
                 let u = ui.querySelector('.var-led')
                 const setLedOn = !u.classList.contains('active');
                 this.log(`Set led mode to: ${setLedOn ? 'On' : 'Off'}`);
-                this.setLed(setLedOn)
+                this.setLed(hass, setLedOn)
             }
         }
 
