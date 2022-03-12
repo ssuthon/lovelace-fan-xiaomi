@@ -686,7 +686,7 @@ to{transform:perspective(10em) rotateY(40deg)}
 
 </style>
 <div class="title">
-<p class="var-title">Playground</p>
+<p class="var-title">Xiaomi Fan</p>
 </div>
 <div class="fanbox-container">
 <div class="var-sensors"></div>
