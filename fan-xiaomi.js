@@ -128,7 +128,7 @@ class FanXiaomi extends HTMLElement {
                 });
             }
         } else {
-            this.hass.callService('xiaomi_miio_fan', on ? 'fan_set_led_on' : 'fan_set_led_off', {
+            this.hass.callService(this.config.platform, on ? 'fan_set_led_on' : 'fan_set_led_off', {
                 entity_id: this.config.entity
             });
         }
