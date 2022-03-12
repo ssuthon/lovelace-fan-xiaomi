@@ -60,7 +60,7 @@ class FanXiaomi extends HTMLElement {
     
     supportedAttributes = {
         angle: true, childLock: true, timer: true, rotationAngle: true, speedLevels: 4, naturalSpeed: true, 
-            naturalSpeedReporting: true, supportedAngles: [30, 60, 90, 120], sleepMode: false, led: false
+            naturalSpeedReporting: false, supportedAngles: [30, 60, 90, 120], sleepMode: false, led: false
     }
 
     entityFilters = {
