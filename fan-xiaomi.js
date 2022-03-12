@@ -83,28 +83,23 @@ class FanXiaomi extends HTMLElement {
         }
     }
 
-    async configureAsync(hass) {
-        if (this.config.platform === 'default') {
-            const entities = await hass.callWS({ type: "config/entity_registry/list" });
-            const deviceId = entities.find(e => e.entity_id === this.config.entity).device_id;
-            const deviceEntities = entities.filter(e => e.device_id === deviceId);
-    
-            const attributes = hass.states[this.config.entity].attributes;
- 
-            this.supportedAttributes.speedList = ['low', 'medium', 'high'];
+    checkFanFeatures(attributes) {
+        // TODO: Deprecate as fan.set_speed is deprecated
+        this.supportedAttributes.speedList = ['low', 'medium', 'high'];
             if (attributes.speed_list) {
                 this.supportedAttributes.speedList = attributes.speed_list.filter(s => {
                     const speed = s.toLowerCase();
                     return speed !== "nature" && speed !== "normal" && speed !== "off";
                 });
             }
-    
-            if (attributes.preset_mode && attributes.preset_modes && attributes.preset_modes.includes("Nature")) {
-                this.supportedAttributes.natural_speed = true;
-                this.supportedAttributes.natural_speed_reporting = false;
-            }
-    
-            const oscillationEntity = deviceEntities.find(e => e.entity_id.startsWith("number.") && e.entity_id.endsWith("_oscillation_angle"));
+
+        if (attributes.preset_mode && attributes.preset_modes && attributes.preset_modes.includes("Nature")) {
+            this.supportedAttributes.natural_speed = true;
+        }
+    }
+
+    checkFanAuxFeatures(hass, deviceEntities) {
+        const oscillationEntity = deviceEntities.find(e => e.entity_id.startsWith("number.") && e.entity_id.endsWith("_oscillation_angle"));
             if (oscillationEntity) {
                 this.oscillation_angle_entity = oscillationEntity.entity_id;
                 this.supportedAttributes.angle = true;
@@ -117,45 +112,62 @@ class FanXiaomi extends HTMLElement {
                     this.supportedAttributes.supported_angles = angles;
                 }
             }
-    
-            const delayEntity = deviceEntities.find(e => e.entity_id.startsWith("number.") && e.entity_id.endsWith("_delay_off_countdown"));
-            if (delayEntity) {
-                this.delay_off_entity = delayEntity.entity_id;
-                this.supportedAttributes.timer = true;
-            }
 
-            const childLockEntity = deviceEntities.find(e => e.entity_id.startsWith("switch.") && e.entity_id.endsWith("_child_lock"));
-            if (childLockEntity) {
-                this.child_lock_entity = childLockEntity.entity_id;
-                this.supportedAttributes.childLock = true;
-            }
+        const delayEntity = deviceEntities.find(e => e.entity_id.startsWith("number.") && e.entity_id.endsWith("_delay_off_countdown"));
+        if (delayEntity) {
+            this.delay_off_entity = delayEntity.entity_id;
+            this.supportedAttributes.timer = true;
+        }
 
-            const numberLedEntity = deviceEntities.find(e => e.entity_id.startsWith("number.") && e.entity_id.endsWith("_led_brightness"));
-            if (numberLedEntity) {
-                this.number_led_brightness_entity = numberLedEntity.entity_id;
-                this.supportedAttributes.led = true;
-            }
+        const childLockEntity = deviceEntities.find(e => e.entity_id.startsWith("switch.") && e.entity_id.endsWith("_child_lock"));
+        if (childLockEntity) {
+            this.child_lock_entity = childLockEntity.entity_id;
+            this.supportedAttributes.childLock = true;
+        }
 
-            const selectLedEntity = deviceEntities.find(e => e.entity_id.startsWith("select.") && e.entity_id.endsWith("_led_brightness"));
-            if (selectLedEntity) {
-                this.select_led_brightness_entity = selectLedEntity.entity_id;
-                this.supportedAttributes.led = true;
-            }
+        // TODO: Remember entity type
+        const numberLedEntity = deviceEntities.find(e => e.entity_id.startsWith("number.") && e.entity_id.endsWith("_led_brightness"));
+        if (numberLedEntity) {
+            this.number_led_brightness_entity = numberLedEntity.entity_id;
+            this.supportedAttributes.led = true;
+        }
 
-            const tempSensorEntity = deviceEntities.find(e => e.entity_id.startsWith("sensor.") && e.entity_id.endsWith("_temperature"));
-            if (tempSensorEntity) {
-                this.temp_sensor_entity = tempSensorEntity.entity_id;
-            }
+        const selectLedEntity = deviceEntities.find(e => e.entity_id.startsWith("select.") && e.entity_id.endsWith("_led_brightness"));
+        if (selectLedEntity) {
+            this.select_led_brightness_entity = selectLedEntity.entity_id;
+            this.supportedAttributes.led = true;
+        }
 
-            const humiditySensorEntity = deviceEntities.find(e => e.entity_id.startsWith("sensor.") && e.entity_id.endsWith("_humidity"));
-            if (humiditySensorEntity) {
-                this.humidity_sensor_entity = humiditySensorEntity.entity_id;
-            }
+        // TODO Add switch type
+    }
 
-            const powerSupplyEntity = deviceEntities.find(e => e.entity_id.startsWith("binary_sensor.") && e.entity_id.endsWith("_power_supply"));
-            if (powerSupplyEntity) {
-                this.power_supply_entity = powerSupplyEntity.entity_id;
-            }
+    checkFanSensors(deviceEntities) {
+        const tempSensorEntity = deviceEntities.find(e => e.entity_id.startsWith("sensor.") && e.entity_id.endsWith("_temperature"));
+        if (tempSensorEntity) {
+            this.temp_sensor_entity = tempSensorEntity.entity_id;
+        }
+
+        const humiditySensorEntity = deviceEntities.find(e => e.entity_id.startsWith("sensor.") && e.entity_id.endsWith("_humidity"));
+        if (humiditySensorEntity) {
+            this.humidity_sensor_entity = humiditySensorEntity.entity_id;
+        }
+
+        const powerSupplyEntity = deviceEntities.find(e => e.entity_id.startsWith("binary_sensor.") && e.entity_id.endsWith("_power_supply"));
+        if (powerSupplyEntity) {
+            this.power_supply_entity = powerSupplyEntity.entity_id;
+        }
+    }
+
+    async configureAsync(hass) {
+        const attributes = hass.states[this.config.entity].attributes;
+        const entities = await hass.callWS({ type: "config/entity_registry/list" });
+        const deviceId = entities.find(e => e.entity_id === this.config.entity).device_id; //TODO: Null checks for entity before retrieving device_id
+        const deviceEntities = entities.filter(e => e.device_id === deviceId);
+        
+        if (this.config.platform === 'default') {
+            this.checkFanFeatures(attributes)
+            this.checkFanAuxFeatures(hass, deviceEntities)
+            this.checkFanSensors(deviceEntities)
         } else {
             const state = hass.states[this.config.entity];
             const attrs = state.attributes;
