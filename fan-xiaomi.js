@@ -59,8 +59,8 @@ class FanXiaomi extends HTMLElement {
     }
 
     supportedAttributes = {
-        angle: true, childLock: true, timer: true, rotationAngle: true, speedLevels: 4, naturalSpeed: true, 
-            naturalSpeedReporting: false, supportedAngles: [30, 60, 90, 120], sleepMode: false, led: false
+        angle: true, childLock: true, timer: true, rotationAngle: true, speedLevels: 4, 
+        naturalSpeed: true, supportedAngles: [30, 60, 90, 120], sleepMode: false, led: false
     }
 
     entityFilters = {
@@ -194,9 +194,9 @@ class FanXiaomi extends HTMLElement {
     getPresetMode(hass) {
         const attrs = hass.states[this.config.entity].attributes;
         if (this.config.platform === 'default') {
-            return attrs['preset_mode'].toLowerCase();
+            return attrs['preset_mode'];
         }
-        return attrs['mode'].toLowerCase();
+        return attrs['mode'];
     }
 
     setLed(hass, on) {
@@ -381,10 +381,8 @@ class FanXiaomi extends HTMLElement {
                 this.supportedAttributes.rotationAngle = false;
                 this.supportedAttributes.speedLevels = 3;
                 this.supportedAttributes.naturalSpeed = true;
-                this.supportedAttributes.naturalSpeedReporting = false;
             }
             if (['dmaker.fan.p15', 'dmaker.fan.p11', 'dmaker.fan.p10', 'dmaker.fan.p5'].includes(attrs['model'])){
-                this.supportedAttributes.naturalSpeedReporting = false;
                 this.supportedAttributes.supportedAngles = [30, 60, 90, 120, 140];
                 //this.supportedAttributes.led = true;
             }
@@ -397,11 +395,9 @@ class FanXiaomi extends HTMLElement {
                 this.supportedAttributes.rotationAngle = false;
                 this.supportedAttributes.speedLevels = 3;
                 this.supportedAttributes.naturalSpeed = false;
-                this.supportedAttributes.naturalSpeedReporting = false;
                 this.supportedAttributes.timer = false;
             }
             if (['dmaker.fan.p9'].includes(attrs['model'])){
-                this.supportedAttributes.naturalSpeedReporting = false;
                 this.supportedAttributes.supportedAngles = [30, 60, 90, 120, 150];
             }
             if (['leshow.fan.ss4'].includes(attrs['model'])){
@@ -409,7 +405,6 @@ class FanXiaomi extends HTMLElement {
                 this.supportedAttributes.childLock = false;
                 this.supportedAttributes.rotationAngle = false;
                 this.supportedAttributes.naturalSpeed = false;
-                this.supportedAttributes.naturalSpeedReporting = false;
                 this.supportedAttributes.sleepMode = true;
             }
             if (['zhimi.fan.za5'].includes(attrs['model'])){
@@ -1088,19 +1083,7 @@ LED
         // Natural mode
         activeElement = fanboxa.querySelector('.var-natural')
         if (this.supportedAttributes.naturalSpeed) {
-            //p* fans do not report direct_speed and natural_speed
-            if (!this.supportedAttributes.naturalSpeedReporting) {
-                if (preset_mode === 'nature') {
-                    natural_speed = true
-                } else if (preset_mode === 'normal') {
-                    natural_speed = false
-                } else {
-                    this.error(`Unrecognized mode for ${model} when updating natural mode state: ${preset_mode}`)
-                    natural_speed = false
-                    this.error(`Defaulting to natural_speed = ${natural_speed}`)
-                }
-            }
-            if (natural_speed) {
+            if (preset_mode === 'Nature') {
                 if (activeElement.classList.contains('active') === false) {
                     activeElement.classList.add('active')
                 }
