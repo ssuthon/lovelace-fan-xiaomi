@@ -198,12 +198,14 @@ class FanXiaomi extends HTMLElement {
     }
 
     async configureAsync(hass) {
-        const attributes = hass.states[this.config.entity].attributes;
-        const entities = await hass.callWS({ type: "config/entity_registry/list" });
-        const deviceId = entities.find(e => e.entity_id === this.config.entity).device_id; //TODO: Null checks for entity before retrieving device_id
-        const deviceEntities = entities.filter(e => e.device_id === deviceId);
-        
         if (this.config.platform === 'default') {
+            const attributes = hass.states[this.config.entity].attributes;
+            const allEntities = await hass.callWS({ type: "config/entity_registry/list" });
+            const fanEntity = allEntities.find(e => e.entity_id === this.config.entity)
+            if (!fanEntity) {
+                return
+            }
+            const deviceEntities = allEntities.filter(e => e.device_id === fanEntity.device_id);
             this.checkFanFeatures(attributes)
             this.checkFanAuxFeatures(hass, deviceEntities)
             this.checkFanSensors(deviceEntities)
