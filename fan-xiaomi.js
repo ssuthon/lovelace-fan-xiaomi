@@ -40,7 +40,6 @@ const defaultConfig = {
     platform: OptionsPlatform[0],
     entity: "fan.fan",
     disable_animation: false,
-    use_standard_speeds: false,
     force_sleep_mode_support: false,
     hide_led_button: false
 }
@@ -183,19 +182,25 @@ class FanXiaomi extends HTMLElement {
         return hass.states[this.config.entity].attributes['oscillating'];
     }
 
-    setSpeed(hass, value) {
-        hass.callService('fan', 'set_speed', {
+    setSpeedPercentage(hass, value) {
+        hass.callService('fan', 'set_percentage', {
             entity_id: this.config.entity,
-            speed: value
+            percentage: value
         });
-    }
-
-    getSpeed(hass) {
-        return hass.states[this.config.entity].attributes['speed'];
     }
 
     getSpeedPercentage(hass) {
         return hass.states[this.config.entity].attributes['percentage'];
+    }
+
+    setSpeedLevel(hass, value) {
+        let speedPercentage = value / this.supportedAttributes.speedLevels * 100
+        this.setSpeedPercentage(hass, speedPercentage)
+    }
+
+    getSpeedLevel(hass) {
+        let speedPercentage = this.getSpeedPercentage(hass)
+        return Math.round(speedPercentage / 100 * this.supportedAttributes.speedLevels)
     }
 
     setPresetMode(hass, value) {
@@ -303,15 +308,6 @@ class FanXiaomi extends HTMLElement {
     }
 
     checkFanFeatures(attributes) {
-        // TODO: Deprecate as fan.set_speed is deprecated
-        this.supportedAttributes.speedList = ['low', 'medium', 'high'];
-            if (attributes.speed_list) {
-                this.supportedAttributes.speedList = attributes.speed_list.filter(s => {
-                    const speed = s.toLowerCase();
-                    return speed !== "nature" && speed !== "normal" && speed !== "off";
-                });
-            }
-
         if (attributes.preset_mode && attributes.preset_modes && attributes.preset_modes.includes("Nature")) {
             this.supportedAttributes.naturalSpeed = true;
         }
@@ -423,10 +419,6 @@ class FanXiaomi extends HTMLElement {
                 this.supportedAttributes.sleepMode = true;
             }
 
-            //trick to support of 'any' fan
-            if (this.config.use_standard_speeds) {
-                this.supportedAttributes.speedList = ['low', 'medium', 'high']
-            }
             if (this.config.force_sleep_mode_support) {
                 this.supportedAttributes.sleepMode = true;
             }
@@ -499,23 +491,17 @@ class FanXiaomi extends HTMLElement {
                 //let iconSpan = u.querySelector('.icon-waper')
                 let icon = u.querySelector('.icon-waper > ha-icon').getAttribute('icon')
                 let newSpeedLevel
-                let newSpeed
 
                 let maskSpeedLevel = /mdi:numeric-(\d)-box-outline/g
                 let speedLevelMatch = maskSpeedLevel.exec(icon)
                 let speedLevel = parseInt(speedLevelMatch ? speedLevelMatch[1] : 1)
-                if (this.config.use_standard_speeds || this.config.platform === 'default') {
-                    newSpeedLevel = this.supportedAttributes.speedList[(speedLevel <
-                        this.supportedAttributes.speedList.length ? speedLevel: 0)]
-                    newSpeed = newSpeedLevel
-                } else {
-                    newSpeedLevel = (speedLevel < this.supportedAttributes.speedLevels ? speedLevel+1: 1)
-                    newSpeed = `Level ${newSpeedLevel}`
+                newSpeedLevel = speedLevel + 1 
+                if (newSpeedLevel > this.supportedAttributes.speedLevels) {
+                    newSpeedLevel = 1
                 }
 
-
-                this.log(`Set speed to: ${newSpeed}`)
-                this.setSpeed(hass, newSpeed);
+                this.log(`Set speed to: ${newSpeedLevel}`)
+                this.setSpeedLevel(hass, newSpeedLevel);
             }
         }
 
@@ -722,7 +708,7 @@ class FanXiaomi extends HTMLElement {
             oscillating: this.getOscillation(hass),
             delay_off_countdown: this.getTimer(hass),
             angle: this.getAngle(hass),
-            speed: this.getSpeed(hass),
+            speed_level: this.getSpeedLevel(hass),
             preset_mode: this.getPresetMode(hass),
             model: this.getModel(hass),
             led: this.getLed(hass),
@@ -945,7 +931,7 @@ LED
     // Define UI Parameters
 
     setUI(fanboxa, {title, speed_percentage, state, child_lock, oscillating,
-        delay_off_countdown, angle, speed, preset_mode, model, led,
+        delay_off_countdown, angle, speed_level, preset_mode, model, led,
         temperature, humidity, power_supply
     }) {
         fanboxa.querySelector('.var-title').textContent = title
@@ -1055,25 +1041,9 @@ LED
             activeElement.classList.remove('active')
         }
 
-        let speedRegexpMatch
-        let speedLevel
-        let speed_percentage_int = Number(speed_percentage)
-        if (this.config.use_standard_speeds || this.config.platform === 'default') {
-            let speedCount = this.supportedAttributes.speedList.length
-            speedLevel = Math.round(speed_percentage_int / 100 * speedCount)
-        } else {
-            let speedRegexp = /Level (\d)/g
-            speedRegexpMatch = speedRegexp.exec(speed)
-            if (speedRegexpMatch && speedRegexpMatch.length > 0) {
-                speedLevel = speedRegexpMatch[1]
-            }
-            if (speedLevel === undefined) {
-                speedLevel = 1
-            }
-        }
-        iconSpan.innerHTML = `<ha-icon icon="mdi:numeric-${speedLevel}-box-outline"></ha-icon>`
+        iconSpan.innerHTML = `<ha-icon icon="mdi:numeric-${speed_level}-box-outline"></ha-icon>`
         activeElement = fanboxa.querySelector('.fanbox .blades')
-        activeElement.className = `blades level${speedLevel}`
+        activeElement.className = `blades level${speed_level}`
 
         // Natural mode
         activeElement = fanboxa.querySelector('.var-natural')
@@ -1163,7 +1133,7 @@ LED
 
     // Add to logs
     log() {
-        //console.log(...arguments)
+        // console.log(...arguments)
     }
     warn() {
         // console.log(...arguments)
@@ -1183,10 +1153,6 @@ class ContentCardEditor extends LitElement {
         ...defaultConfig,
         ...config,
     };
-
-    if (this.config.platform === 'default') {
-        this.config.use_standard_speeds = true;
-    }
   }
 
   static get properties() {
@@ -1244,16 +1210,6 @@ class ContentCardEditor extends LitElement {
         <ha-switch
           .checked=${this.config.disable_animation}
           .configValue="${'disable_animation'}"
-          @change=${this._valueChanged}
-        ></ha-switch>
-      </ha-formfield>
-      </div>
-      <div class="row">
-      <ha-formfield label="Use HA standard speeds (low/medium/high)">
-        <ha-switch
-          .disabled=${this.config.platform === 'default'}
-          .checked=${this.config.use_standard_speeds}
-          .configValue="${'use_standard_speeds'}"
           @change=${this._valueChanged}
         ></ha-switch>
       </ha-formfield>
