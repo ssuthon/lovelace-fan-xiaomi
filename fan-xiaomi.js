@@ -303,15 +303,6 @@ class FanXiaomi extends HTMLElement {
     }
 
     checkFanFeatures(attributes) {
-        // TODO: Deprecate as fan.set_speed is deprecated
-        this.supportedAttributes.speedList = ['low', 'medium', 'high'];
-            if (attributes.speed_list) {
-                this.supportedAttributes.speedList = attributes.speed_list.filter(s => {
-                    const speed = s.toLowerCase();
-                    return speed !== "nature" && speed !== "normal" && speed !== "off";
-                });
-            }
-
         if (attributes.preset_mode && attributes.preset_modes && attributes.preset_modes.includes("Nature")) {
             this.supportedAttributes.naturalSpeed = true;
         }
