@@ -182,19 +182,25 @@ class FanXiaomi extends HTMLElement {
         return hass.states[this.config.entity].attributes['oscillating'];
     }
 
-    setSpeed(hass, value) {
-        hass.callService('fan', 'set_speed', {
+    setSpeedPercentage(hass, value) {
+        hass.callService('fan', 'set_percentage', {
             entity_id: this.config.entity,
             speed: value
         });
     }
 
-    getSpeed(hass) {
-        return hass.states[this.config.entity].attributes['speed'];
-    }
-
     getSpeedPercentage(hass) {
         return hass.states[this.config.entity].attributes['percentage'];
+    }
+
+    setSpeedLevel(hass, value) {
+        let speedPercentage = Math.round(value / this.supportedAttributes.speedLevels) * 100
+        this.setSpeedPercentage(hass, speedPercentage)
+    }
+
+    getSpeedLevel(hass) {
+        let speedPercentage = Number(hass.states[this.config.entity].attributes['speed'])
+        return Math.round(speedPercentage / 100 * this.supportedAttributes.speedLevels)
     }
 
     setPresetMode(hass, value) {
