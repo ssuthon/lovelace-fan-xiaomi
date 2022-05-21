@@ -714,7 +714,7 @@ class FanXiaomi extends HTMLElement {
             oscillating: this.getOscillation(hass),
             delay_off_countdown: this.getTimer(hass),
             angle: this.getAngle(hass),
-            speed: this.getSpeed(hass),
+            speed_level: this.getSpeedLevel(hass),
             preset_mode: this.getPresetMode(hass),
             model: this.getModel(hass),
             led: this.getLed(hass),
@@ -937,7 +937,7 @@ LED
     // Define UI Parameters
 
     setUI(fanboxa, {title, speed_percentage, state, child_lock, oscillating,
-        delay_off_countdown, angle, speed, preset_mode, model, led,
+        delay_off_countdown, angle, speedLevel, preset_mode, model, led,
         temperature, humidity, power_supply
     }) {
         fanboxa.querySelector('.var-title').textContent = title
@@ -1047,22 +1047,6 @@ LED
             activeElement.classList.remove('active')
         }
 
-        let speedRegexpMatch
-        let speedLevel
-        let speed_percentage_int = Number(speed_percentage)
-        if (this.config.use_standard_speeds || this.config.platform === 'default') {
-            let speedCount = this.supportedAttributes.speedList.length
-            speedLevel = Math.round(speed_percentage_int / 100 * speedCount)
-        } else {
-            let speedRegexp = /Level (\d)/g
-            speedRegexpMatch = speedRegexp.exec(speed)
-            if (speedRegexpMatch && speedRegexpMatch.length > 0) {
-                speedLevel = speedRegexpMatch[1]
-            }
-            if (speedLevel === undefined) {
-                speedLevel = 1
-            }
-        }
         iconSpan.innerHTML = `<ha-icon icon="mdi:numeric-${speedLevel}-box-outline"></ha-icon>`
         activeElement = fanboxa.querySelector('.fanbox .blades')
         activeElement.className = `blades level${speedLevel}`
