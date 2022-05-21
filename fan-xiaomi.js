@@ -185,7 +185,7 @@ class FanXiaomi extends HTMLElement {
     setSpeedPercentage(hass, value) {
         hass.callService('fan', 'set_percentage', {
             entity_id: this.config.entity,
-            speed: value
+            percentage: value
         });
     }
 
