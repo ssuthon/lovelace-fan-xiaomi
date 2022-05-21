@@ -419,10 +419,6 @@ class FanXiaomi extends HTMLElement {
                 this.supportedAttributes.sleepMode = true;
             }
 
-            //trick to support of 'any' fan
-            if (this.config.use_standard_speeds) {
-                this.supportedAttributes.speedList = ['low', 'medium', 'high']
-            }
             if (this.config.force_sleep_mode_support) {
                 this.supportedAttributes.sleepMode = true;
             }
