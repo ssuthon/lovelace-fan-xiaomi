@@ -194,12 +194,12 @@ class FanXiaomi extends HTMLElement {
     }
 
     setSpeedLevel(hass, value) {
-        let speedPercentage = Math.round(value / this.supportedAttributes.speedLevels) * 100
+        let speedPercentage = value / this.supportedAttributes.speedLevels * 100
         this.setSpeedPercentage(hass, speedPercentage)
     }
 
     getSpeedLevel(hass) {
-        let speedPercentage = Number(hass.states[this.config.entity].attributes['speed'])
+        let speedPercentage = this.getSpeedPercentage(hass)
         return Math.round(speedPercentage / 100 * this.supportedAttributes.speedLevels)
     }
 
