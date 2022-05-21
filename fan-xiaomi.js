@@ -491,23 +491,17 @@ class FanXiaomi extends HTMLElement {
                 //let iconSpan = u.querySelector('.icon-waper')
                 let icon = u.querySelector('.icon-waper > ha-icon').getAttribute('icon')
                 let newSpeedLevel
-                let newSpeed
 
                 let maskSpeedLevel = /mdi:numeric-(\d)-box-outline/g
                 let speedLevelMatch = maskSpeedLevel.exec(icon)
                 let speedLevel = parseInt(speedLevelMatch ? speedLevelMatch[1] : 1)
-                if (this.config.use_standard_speeds || this.config.platform === 'default') {
-                    newSpeedLevel = this.supportedAttributes.speedList[(speedLevel <
-                        this.supportedAttributes.speedList.length ? speedLevel: 0)]
-                    newSpeed = newSpeedLevel
-                } else {
-                    newSpeedLevel = (speedLevel < this.supportedAttributes.speedLevels ? speedLevel+1: 1)
-                    newSpeed = `Level ${newSpeedLevel}`
+                newSpeedLevel = speedLevel + 1 
+                if (newSpeedLevel > this.supportedAttributes.speedLevels) {
+                    newSpeedLevel = 1
                 }
 
-
-                this.log(`Set speed to: ${newSpeed}`)
-                this.setSpeed(hass, newSpeed);
+                this.log(`Set speed to: ${newSpeedLevel}`)
+                this.setSpeedLevel(hass, newSpeedLevel);
             }
         }
 
