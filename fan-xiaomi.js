@@ -40,7 +40,6 @@ const defaultConfig = {
     platform: OptionsPlatform[0],
     entity: "fan.fan",
     disable_animation: false,
-    use_standard_speeds: false,
     force_sleep_mode_support: false,
     hide_led_button: false
 }
@@ -1174,10 +1173,6 @@ class ContentCardEditor extends LitElement {
         ...defaultConfig,
         ...config,
     };
-
-    if (this.config.platform === 'default') {
-        this.config.use_standard_speeds = true;
-    }
   }
 
   static get properties() {
@@ -1235,16 +1230,6 @@ class ContentCardEditor extends LitElement {
         <ha-switch
           .checked=${this.config.disable_animation}
           .configValue="${'disable_animation'}"
-          @change=${this._valueChanged}
-        ></ha-switch>
-      </ha-formfield>
-      </div>
-      <div class="row">
-      <ha-formfield label="Use HA standard speeds (low/medium/high)">
-        <ha-switch
-          .disabled=${this.config.platform === 'default'}
-          .checked=${this.config.use_standard_speeds}
-          .configValue="${'use_standard_speeds'}"
           @change=${this._valueChanged}
         ></ha-switch>
       </ha-formfield>
