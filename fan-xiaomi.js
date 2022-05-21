@@ -931,7 +931,7 @@ LED
     // Define UI Parameters
 
     setUI(fanboxa, {title, speed_percentage, state, child_lock, oscillating,
-        delay_off_countdown, angle, speedLevel, preset_mode, model, led,
+        delay_off_countdown, angle, speed_level, preset_mode, model, led,
         temperature, humidity, power_supply
     }) {
         fanboxa.querySelector('.var-title').textContent = title
@@ -1041,9 +1041,9 @@ LED
             activeElement.classList.remove('active')
         }
 
-        iconSpan.innerHTML = `<ha-icon icon="mdi:numeric-${speedLevel}-box-outline"></ha-icon>`
+        iconSpan.innerHTML = `<ha-icon icon="mdi:numeric-${speed_level}-box-outline"></ha-icon>`
         activeElement = fanboxa.querySelector('.fanbox .blades')
-        activeElement.className = `blades level${speedLevel}`
+        activeElement.className = `blades level${speed_level}`
 
         // Natural mode
         activeElement = fanboxa.querySelector('.var-natural')
@@ -1133,7 +1133,7 @@ LED
 
     // Add to logs
     log() {
-        //console.log(...arguments)
+        // console.log(...arguments)
     }
     warn() {
         // console.log(...arguments)
