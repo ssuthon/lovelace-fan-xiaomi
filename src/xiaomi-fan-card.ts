@@ -302,12 +302,15 @@ export class FanXiaomiCard extends LitElement {
     }
   }
 
-  private getPresetMode() {
+  /**
+   * @returns The fan's preset (nature/normal) mode as a lowercase string.
+   */
+  private getPresetMode(): "nature" | "normal" | undefined {
     const attrs = this.hass.states[this.config.entity].attributes;
     if (this.config.platform === "default") {
-      return attrs["preset_mode"];
+      return attrs["preset_mode"]?.toLowerCase();
     }
-    return attrs["mode"];
+    return attrs["mode"]?.toLowerCase();
   }
 
   private setLed(on: boolean) {
@@ -401,7 +404,11 @@ export class FanXiaomiCard extends LitElement {
       });
     }
 
-    if (attributes.preset_mode && attributes.preset_modes && attributes.preset_modes.includes("Nature")) {
+    if (
+      attributes.preset_mode &&
+      attributes.preset_modes &&
+      attributes.preset_modes.some((m) => m.toLowerCase() === "nature")
+    ) {
       this.supportedAttributes.naturalSpeed = true;
     }
   }
@@ -636,7 +643,7 @@ export class FanXiaomiCard extends LitElement {
               </div>`}
         ${this.supportedAttributes.naturalSpeed
           ? html`<div
-              class="op var-natural ${preset_mode === "Nature" ? "active" : ""}"
+              class="op var-natural ${preset_mode === "nature" ? "active" : ""}"
               @click=${this.toggleNatureMode}
             >
               <button>
@@ -764,7 +771,7 @@ export class FanXiaomiCard extends LitElement {
   }
 
   private toggleNatureMode() {
-    const currentlyEnabled = this.getPresetMode() === "Nature";
+    const currentlyEnabled = this.getPresetMode() === "nature";
     this.setPresetMode(currentlyEnabled ? "Normal" : "Nature");
   }
 
