@@ -87,14 +87,6 @@ export class FanXiaomiCardEditor extends ScopedRegistryHost(LitElement) implemen
           return html`<mwc-list-item .value=${entity}>${entity}</mwc-list-item>`;
         })}
       </mwc-select>
-      <mwc-formfield label="Use HA standard speeds (low/medium/high)">
-        <mwc-switch
-          .disabled=${config.platform === "default"}
-          .checked=${this.config.platform === "default" || this.config.use_standard_speeds}
-          .configValue=${"use_standard_speeds"}
-          @change=${this._valueChanged}
-        ></mwc-switch>
-      </mwc-formfield>
       <mwc-formfield label="Show sleep mode button">
         <mwc-switch
           .checked=${config.force_sleep_mode_support}

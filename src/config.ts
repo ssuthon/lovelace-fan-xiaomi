@@ -7,7 +7,6 @@ interface FanXiaomiCustomConfig {
   platform: typeof platforms[number];
   entity: string;
   disable_animation: boolean;
-  use_standard_speeds: boolean;
   force_sleep_mode_support: boolean;
   hide_led_button: boolean;
 }
@@ -19,7 +18,6 @@ export const defaultConfig: FanXiaomiCustomConfig = {
   platform: platforms[0],
   entity: "",
   disable_animation: false,
-  use_standard_speeds: false,
   force_sleep_mode_support: false,
   hide_led_button: false,
 };
