@@ -92,6 +92,8 @@ Build output should appear in the `/dist` directory.
 
 _You may need to change "127.0.0.1" to the IP of your development machine if you are developing remotely._
 
+> If your Home Assistant UI is running on https, you'll need to provide the resources via https as well. Use `npm run start -- --https` to serve via https, and switch the `url: http://127.0.0.1` above to `url: https://localhost`.
+
 ## Credits
 
 [fineemb](https://github.com/fineemb) (Original author)
