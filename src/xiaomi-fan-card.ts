@@ -32,7 +32,6 @@ type SupportedAttributes = {
   sleepMode: boolean;
   led: boolean;
   speedIncreaseDecreaseButtons: boolean;
-  speedList: string[];
 };
 
 type DeviceEntities = {
@@ -149,7 +148,6 @@ export class FanXiaomiCard extends LitElement {
     sleepMode: false,
     led: false,
     speedIncreaseDecreaseButtons: false,
-    speedList: [],
   };
 
   @state() private config!: FanXiaomiCardConfig;
@@ -211,7 +209,6 @@ export class FanXiaomiCard extends LitElement {
 
   private getTimer(): number {
     if (this.deviceEntities.timer) {
-      console.log();
       let minutesRemaining = Number(this.hass.states[this.deviceEntities.timer].state);
       const max = this.hass.states[this.deviceEntities.timer].attributes["max"];
       if (max && minutesRemaining > max) {
@@ -255,32 +252,13 @@ export class FanXiaomiCard extends LitElement {
     return this.hass.states[this.config.entity].attributes["oscillating"];
   }
 
-  private getSpeed() {
-    return this.hass.states[this.config.entity].attributes["speed"];
-  }
-
   private getSpeedPercentage(): number {
     return Number(this.hass.states[this.config.entity].attributes["percentage"]);
   }
 
   private getSpeedLevel(): number {
-    let speedLevel = 0;
-
-    if (this.config.use_standard_speeds || this.config.platform === "default") {
-      const speedCount = this.supportedAttributes.speedList.length;
-      speedLevel = Math.ceil((this.getSpeedPercentage() / 100) * speedCount);
-    } else {
-      const speedRegexp = /Level (\d)/g;
-      const speedRegexpMatch = speedRegexp.exec(this.getSpeed());
-      if (speedRegexpMatch && speedRegexpMatch.length > 0) {
-        speedLevel = Number(speedRegexpMatch[1]);
-      }
-      if (speedLevel === NaN) {
-        speedLevel = 1;
-      }
-    }
-
-    return speedLevel;
+    const speedCount = this.supportedAttributes.speedLevels;
+    return Math.ceil((this.getSpeedPercentage() / 100) * speedCount);
   }
 
   private setPresetMode(value) {
@@ -302,12 +280,15 @@ export class FanXiaomiCard extends LitElement {
     }
   }
 
-  private getPresetMode() {
+  /**
+   * @returns The fan's preset (nature/normal) mode as a lowercase string.
+   */
+  private getPresetMode(): "nature" | "normal" | undefined {
     const attrs = this.hass.states[this.config.entity].attributes;
     if (this.config.platform === "default") {
-      return attrs["preset_mode"];
+      return attrs["preset_mode"]?.toLowerCase();
     }
-    return attrs["mode"];
+    return attrs["mode"]?.toLowerCase();
   }
 
   private setLed(on: boolean) {
@@ -392,16 +373,11 @@ export class FanXiaomiCard extends LitElement {
   }
 
   private checkFanFeatures(attributes) {
-    // TODO: Deprecate as fan.set_speed is deprecated
-    this.supportedAttributes.speedList = ["low", "medium", "high"];
-    if (attributes.speed_list) {
-      this.supportedAttributes.speedList = attributes.speed_list.filter((s) => {
-        const speed = s.toLowerCase();
-        return speed !== "nature" && speed !== "normal" && speed !== "off";
-      });
-    }
-
-    if (attributes.preset_mode && attributes.preset_modes && attributes.preset_modes.includes("Nature")) {
+    if (
+      attributes.preset_mode &&
+      attributes.preset_modes &&
+      attributes.preset_modes.some((m) => m.toLowerCase() === "nature")
+    ) {
       this.supportedAttributes.naturalSpeed = true;
     }
   }
@@ -446,7 +422,7 @@ export class FanXiaomiCard extends LitElement {
       const state = this.hass.states[this.config.entity];
       const attrs = state.attributes;
 
-      if (["dmaker.fan.p15"].includes(attrs["model"])) {
+      if (["dmaker.fan.p15", "dmaker.fan.p18", "dmaker.fan.p33"].includes(attrs["model"])) {
         this.supportedAttributes.supportedAngles = [30, 60, 90, 120, 140];
         //this.supportedAttributes.led = true;
       }
@@ -470,9 +446,6 @@ export class FanXiaomiCard extends LitElement {
       }
 
       //trick to support of 'any' fan
-      if (this.config.use_standard_speeds) {
-        this.supportedAttributes.speedList = ["low", "medium", "high"];
-      }
       if (this.config.force_sleep_mode_support) {
         this.supportedAttributes.sleepMode = true;
       }
@@ -552,7 +525,7 @@ export class FanXiaomiCard extends LitElement {
                 </div>`
               : ""}
             <div class="fanbox ${state.state === "on" ? "active" : ""} ${oscillating ? "oscillation" : ""}">
-              <div class="blades level${speedLevel}">
+              <div class="blades level${state.state === "on" ? Math.max(1, speedLevel) : 0}">
                 <div class="b1 ang1"></div>
                 <div class="b2 ang25"></div>
                 <div class="b3 ang49"></div>
@@ -618,10 +591,10 @@ export class FanXiaomiCard extends LitElement {
                   Speed down
                 </button>
               </div>`
-          : html`<div class="op var-speed ${speedLevel > 0 ? "active" : ""}" @click=${this.toggleSpeedLevel}>
+          : html`<div class="op var-speed ${(speedLevel > 0 && state.state === "on") ? "active" : ""}" @click=${this.toggleSpeedLevel}>
                 <button>
                   <span class="icon-waper">
-                    <ha-icon icon="mdi:numeric-${speedLevel}-box-outline"></ha-icon>
+                    <ha-icon icon="mdi:numeric-${(state.state === "on") ? speedLevel : 0}-box-outline"></ha-icon>
                   </span>
                   Speed
                 </button>
@@ -636,7 +609,7 @@ export class FanXiaomiCard extends LitElement {
               </div>`}
         ${this.supportedAttributes.naturalSpeed
           ? html`<div
-              class="op var-natural ${preset_mode === "Nature" ? "active" : ""}"
+              class="op var-natural ${preset_mode === "nature" ? "active" : ""}"
               @click=${this.toggleNatureMode}
             >
               <button>
@@ -702,28 +675,21 @@ export class FanXiaomiCard extends LitElement {
    * e.g. if at level 1, jumps to level 2
    * If at the maximum speed, this turns the fan of (i.e. "level 0") as this is the only way to turn off
    *   the fan when animations/fanbox is disabled.
+   *
+   * When animations/fanbox is enabled, max level jumps to level 1.
+   * Jump from level 0 - turns on the fan
    */
   private toggleSpeedLevel(): void {
-    const speedLevel = this.getSpeedLevel();
+    const currentLevel = this.getSpeedLevel();
 
-    let newSpeed: string | 0;
-    if (this.config.use_standard_speeds || this.config.platform === "default") {
-      newSpeed =
-        speedLevel >= this.supportedAttributes.speedList.length ? 0 : this.supportedAttributes.speedList[speedLevel];
-    } else {
-      newSpeed = speedLevel >= this.supportedAttributes.speedLevels ? 0 : `Level ${speedLevel + 1}`;
-    }
+    const newLevel = currentLevel >= this.supportedAttributes.speedLevels ?
+      (this.config.disable_animation ? (this.hass.states[this.config.entity].state === 'off' ? 1 : 0) : 1) : currentLevel + 1;
+    const newPercentage = (newLevel / this.supportedAttributes.speedLevels) * 100;
 
-    if (newSpeed === 0) {
-      this.hass.callService("fan", "turn_off", {
-        entity_id: this.config.entity,
-      });
-    } else {
-      this.hass.callService("fan", "set_speed", {
-        entity_id: this.config.entity,
-        speed: newSpeed,
-      });
-    }
+    this.hass.callService("fan", "set_percentage", {
+      entity_id: this.config.entity,
+      percentage: newPercentage,
+    });
   }
 
   private increaseSpeed() {
@@ -764,7 +730,7 @@ export class FanXiaomiCard extends LitElement {
   }
 
   private toggleNatureMode() {
-    const currentlyEnabled = this.getPresetMode() === "Nature";
+    const currentlyEnabled = this.getPresetMode() === "nature";
     this.setPresetMode(currentlyEnabled ? "Normal" : "Nature");
   }
 
@@ -1044,20 +1010,17 @@ export class FanXiaomiCard extends LitElement {
         0% {
           transform: perspective(10em) rotateY(0);
         }
-        20% {
+        25% {
           transform: perspective(10em) rotateY(40deg);
         }
-        40% {
+        50% {
           transform: perspective(10em) rotateY(0);
         }
-        60% {
+        75% {
           transform: perspective(10em) rotateY(-40deg);
         }
-        80% {
-          transform: perspective(10em) rotateY(0);
-        }
         to {
-          transform: perspective(10em) rotateY(40deg);
+          transform: perspective(10em) rotateY(0);
         }
       }
     `);

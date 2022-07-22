@@ -56,16 +56,15 @@ type: "custom:fan-xiaomi"
 platform: xiaomi_miio_airpurifier
 ```
 
-| Card attribute             | Default   | Description                                                                                          |
-| -------------------------- | --------- | ---------------------------------------------------------------------------------------------------- |
-| `entity_id`                | -         | `entity_id` of your fan                                                                              |
-| `type`                     | -         | Must be `custom:fan-xiaomi`                                                                          |
-| `name`                     | -         | (Optional) Fan name shown on card title                                                              |
-| `platform`                 | `default` | (Optional) If using Xiaomi Mi Smart Pedestal Fan integration, specify `xiaomi_miio_fan`.             |
-| `disable_animation`        | `False`   | (Optional) Disable fan image and animation                                                           |
-| `use_standard_speeds`      | `False`   | (Optional) Use `low`/`medium`/`high` speeds, if you have issues using this card with your fan model. |
-| `force_sleep_mode_support` | `False`   | (Optional) Enables Sleep button in UI which sets speed to 1%                                         |
-| `hide_led_button`          | `False`   | (Optional) Hide LED toggle for supported models                                                      |
+| Card attribute             | Default   | Description                                                                              |
+| -------------------------- | --------- | ---------------------------------------------------------------------------------------- |
+| `entity_id`                | -         | `entity_id` of your fan                                                                  |
+| `type`                     | -         | Must be `custom:fan-xiaomi`                                                              |
+| `name`                     | -         | (Optional) Fan name shown on card title                                                  |
+| `platform`                 | `default` | (Optional) If using Xiaomi Mi Smart Pedestal Fan integration, specify `xiaomi_miio_fan`. |
+| `disable_animation`        | `False`   | (Optional) Disable fan image and animation                                               |
+| `force_sleep_mode_support` | `False`   | (Optional) Enables Sleep button in UI which sets speed to 1%                             |
+| `hide_led_button`          | `False`   | (Optional) Hide LED toggle for supported models                                          |
 
 ## Preview
 
