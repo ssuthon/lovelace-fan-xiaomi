@@ -422,7 +422,7 @@ export class FanXiaomiCard extends LitElement {
       const state = this.hass.states[this.config.entity];
       const attrs = state.attributes;
 
-      if (["dmaker.fan.p15", "dmaker.fan.p18"].includes(attrs["model"])) {
+      if (["dmaker.fan.p15", "dmaker.fan.p18", "dmaker.fan.p33"].includes(attrs["model"])) {
         this.supportedAttributes.supportedAngles = [30, 60, 90, 120, 140];
         //this.supportedAttributes.led = true;
       }
