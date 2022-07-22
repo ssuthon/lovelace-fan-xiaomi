@@ -1007,20 +1007,17 @@ export class FanXiaomiCard extends LitElement {
         0% {
           transform: perspective(10em) rotateY(0);
         }
-        20% {
+        25% {
           transform: perspective(10em) rotateY(40deg);
         }
-        40% {
+        50% {
           transform: perspective(10em) rotateY(0);
         }
-        60% {
+        75% {
           transform: perspective(10em) rotateY(-40deg);
         }
-        80% {
-          transform: perspective(10em) rotateY(0);
-        }
         to {
-          transform: perspective(10em) rotateY(40deg);
+          transform: perspective(10em) rotateY(0);
         }
       }
     `);
