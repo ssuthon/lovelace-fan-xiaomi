@@ -209,7 +209,6 @@ export class FanXiaomiCard extends LitElement {
 
   private getTimer(): number {
     if (this.deviceEntities.timer) {
-      console.log();
       let minutesRemaining = Number(this.hass.states[this.deviceEntities.timer].state);
       const max = this.hass.states[this.deviceEntities.timer].attributes["max"];
       if (max && minutesRemaining > max) {
@@ -592,10 +591,10 @@ export class FanXiaomiCard extends LitElement {
                   Speed down
                 </button>
               </div>`
-          : html`<div class="op var-speed ${speedLevel > 0 ? "active" : ""}" @click=${this.toggleSpeedLevel}>
+          : html`<div class="op var-speed ${(speedLevel > 0 && state.state === "on") ? "active" : ""}" @click=${this.toggleSpeedLevel}>
                 <button>
                   <span class="icon-waper">
-                    <ha-icon icon="mdi:numeric-${speedLevel}-box-outline"></ha-icon>
+                    <ha-icon icon="mdi:numeric-${(state.state === "on") ? speedLevel : 0}-box-outline"></ha-icon>
                   </span>
                   Speed
                 </button>
@@ -676,11 +675,15 @@ export class FanXiaomiCard extends LitElement {
    * e.g. if at level 1, jumps to level 2
    * If at the maximum speed, this turns the fan of (i.e. "level 0") as this is the only way to turn off
    *   the fan when animations/fanbox is disabled.
+   *
+   * When animations/fanbox is enabled, max level jumps to level 1.
+   * Jump from level 0 - turns on the fan
    */
   private toggleSpeedLevel(): void {
     const currentLevel = this.getSpeedLevel();
 
-    const newLevel = currentLevel >= this.supportedAttributes.speedLevels ? 0 : currentLevel + 1;
+    const newLevel = currentLevel >= this.supportedAttributes.speedLevels ?
+      (this.config.disable_animation ? (this.hass.states[this.config.entity].state === 'off' ? 1 : 0) : 1) : currentLevel + 1;
     const newPercentage = (newLevel / this.supportedAttributes.speedLevels) * 100;
 
     this.hass.callService("fan", "set_percentage", {
