@@ -1,15 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { LitElement, html, TemplateResult, css, PropertyValues, CSSResultGroup, HTMLTemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators";
-import {
-  HomeAssistant,
-  hasConfigOrEntityChanged,
-  ActionHandlerEvent,
-  handleAction,
-  LovelaceCardEditor,
-} from "custom-card-helpers"; // This is a community maintained npm module with common helper functions/types. https://github.com/custom-cards/custom-card-helpers
+import { HomeAssistant, hasConfigOrEntityChanged, handleAction, LovelaceCardEditor } from "custom-card-helpers"; // This is a community maintained npm module with common helper functions/types. https://github.com/custom-cards/custom-card-helpers
 
-import { actionHandler } from "./action-handler-directive";
 import { FanXiaomiCardConfig, defaultConfig } from "./config";
 
 // Add the card to the UI card picker dialog
