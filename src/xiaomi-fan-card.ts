@@ -479,8 +479,7 @@ export class FanXiaomiCard extends LitElement {
     return html`
       <ha-card
         .header=${this.config.name || state?.attributes["friendly_name"] || ""}
-        @action=${this.handleAction}
-        .actionHandler=${actionHandler({})}
+        @click=${this.onCardTitleClick}
         tabindex="0"
         .label=${`Xiaomi Fan: ${this.config.entity || "No Entity Defined"}`}
       >
@@ -591,10 +590,13 @@ export class FanXiaomiCard extends LitElement {
                   Speed down
                 </button>
               </div>`
-          : html`<div class="op var-speed ${(speedLevel > 0 && state.state === "on") ? "active" : ""}" @click=${this.toggleSpeedLevel}>
+          : html`<div
+                class="op var-speed ${speedLevel > 0 && state.state === "on" ? "active" : ""}"
+                @click=${this.toggleSpeedLevel}
+              >
                 <button>
                   <span class="icon-waper">
-                    <ha-icon icon="mdi:numeric-${(state.state === "on") ? speedLevel : 0}-box-outline"></ha-icon>
+                    <ha-icon icon="mdi:numeric-${state.state === "on" ? speedLevel : 0}-box-outline"></ha-icon>
                   </span>
                   Speed
                 </button>
@@ -644,9 +646,9 @@ export class FanXiaomiCard extends LitElement {
     </div>`;
   }
 
-  private handleAction(ev: ActionHandlerEvent): void {
-    if (this.hass && this.config && ev.detail.action) {
-      handleAction(this, this.hass, this.config, ev.detail.action);
+  private onCardTitleClick(): void {
+    if (this.hass && this.config) {
+      handleAction(this, this.hass, this.config, "click");
     }
   }
 
@@ -682,8 +684,14 @@ export class FanXiaomiCard extends LitElement {
   private toggleSpeedLevel(): void {
     const currentLevel = this.getSpeedLevel();
 
-    const newLevel = currentLevel >= this.supportedAttributes.speedLevels ?
-      (this.config.disable_animation ? (this.hass.states[this.config.entity].state === 'off' ? 1 : 0) : 1) : currentLevel + 1;
+    const newLevel =
+      currentLevel >= this.supportedAttributes.speedLevels
+        ? this.config.disable_animation
+          ? this.hass.states[this.config.entity].state === "off"
+            ? 1
+            : 0
+          : 1
+        : currentLevel + 1;
     const newPercentage = (newLevel / this.supportedAttributes.speedLevels) * 100;
 
     this.hass.callService("fan", "set_percentage", {
