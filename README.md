@@ -80,12 +80,12 @@ Build output should appear in the `/dist` directory.
 ### Development Inner Loop
 
 1. `npm install`
-1. Run `npm run start` to do a watch build and host the built files at `http://127.0.0.1:5000/xiaomi-fan-card.js`.
+1. Run `npm run start` to do a watch build and host the built files at `http://127.0.0.1:8234/xiaomi-fan-card.js`.
 1. On a running Home Assistant installation add this to your Lovelace
    `resources:`
 
 ```yaml
-- url: "http://127.0.0.1:5000/xiaomi-fan-card.js"
+- url: "http://127.0.0.1:8234/xiaomi-fan-card.js"
   type: module
 ```
 
