@@ -543,28 +543,7 @@ export class FanXiaomiCard extends LitElement {
                     </div>`
                 : ""}
             </div>
-          </div>`}
-      <div class="attr-row upper-container">
-        ${child_lock !== undefined
-          ? html`<div class="attr button-childlock" @click=${this.toggleChildLock}>
-              <p class="attr-title">Child Lock</p>
-              <p class="attr-value var-childlock">${child_lock ? "On" : "Off"}</p>
-            </div>`
-          : ""}
-        ${this.supportedAttributes.angle
-          ? html`<div class="attr button-angle" @click=${this.toggleOscillationAngle}>
-              <p class="attr-title">Angle(&deg;)</p>
-              <p class="attr-value var-angle">${angle}</p>
-            </div>`
-          : ""}
-        ${delay_off_countdown !== undefined
-          ? html`<div class="attr button-timer" @click=${this.toggleTimer}>
-              <p class="attr-title">Timer</p>
-              <p class="attr-value var-timer">${delayOffCountdownText(delay_off_countdown, model)}</p>
-            </div>`
-          : ""}
-      </div>
-
+          </div>`}      
       <div class="op-row">
         ${this.supportedAttributes.speedIncreaseDecreaseButtons
           ? html`<div class="op var-speedup" @click=${this.increaseSpeed}>
@@ -602,19 +581,6 @@ export class FanXiaomiCard extends LitElement {
                   Oscillate
                 </button>
               </div>`}
-        ${this.supportedAttributes.naturalSpeed
-          ? html`<div
-              class="op var-natural ${preset_mode === "nature" ? "active" : ""}"
-              @click=${this.toggleNatureMode}
-            >
-              <button>
-                <span class="icon-waper">
-                  <ha-icon icon="mdi:leaf"></ha-icon>
-                </span>
-                Natural
-              </button>
-            </div>`
-          : ""}
         ${this.supportedAttributes.sleepMode
           ? html`<div class="op var-sleep ${speed_percentage === 1 ? "active" : ""}" @click=${this.toggleSleepMode}>
               <button>
